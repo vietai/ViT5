@@ -1,4 +1,4 @@
-tensorflow==2.7.0
+tensorflow==2.6.0
 bert-score==0.3.8
 transformers==4.12.5
 t5==latest
