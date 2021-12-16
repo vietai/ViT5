@@ -5,7 +5,6 @@ import mesh_tensorflow.transformer.t2t_vocabulary
 import mesh_tensorflow.transformer.transformer_layers
 import mesh_tensorflow.transformer.utils
 import t5.data.mixtures
-import t5.data.sentencepiece_vocabulary
 import t5.models.mesh_transformer
 
 # Macros:
@@ -21,7 +20,6 @@ noise_density = 0.15
 num_heads = 16
 num_layers = 24
 targets_length = @preprocessors.random_spans_targets_length() 
-init_checkpoint = "gs://t5-data/pretrained_models/t5.1.1.large/model.ckpt-1000000"
 
 # Parameters for AdafactorOptimizer:
 # ==============================================================================
@@ -190,7 +188,6 @@ run.sequence_length = {'inputs': %inputs_length, 'targets': %targets_length}
 run.train_dataset_fn = @t5.models.mesh_transformer.mesh_train_dataset_fn
 run.train_steps = 1000000
 run.variable_filter = None
-run.vocabulary = @t5.data.sentencepiece_vocabulary.SentencePieceVocabulary()
 
 # Parameters for select_random_chunk:
 # ==============================================================================
