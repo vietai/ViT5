@@ -1,12 +1,12 @@
 tensorflow==2.6.0
 bert-score==0.3.8
 transformers==4.12.5
-t5==latest
-os==latest 
-warnings==latest
-time==latest
-gin==latest
-functools==latest
-subprocess==latest
-random==latest
-gsutil==latest
+t5==0.9.3
+# os==latest 
+# warnings==latest
+# time==latest
+# gin==latest
+# functools==latest
+# subprocess==latest
+# random==latest
+# gsutil==latest

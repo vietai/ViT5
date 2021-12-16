@@ -25,9 +25,6 @@ tf.disable_v2_behavior()
 from contextlib import contextmanager
 import logging as py_logging
 
-if ON_CLOUD:
-  tf.get_logger().propagate = False
-  py_logging.root.setLevel('INFO')
 
 @contextmanager
 def tf_verbosity_level(level):
