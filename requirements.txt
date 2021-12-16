@@ -1,0 +1,12 @@
+tensorflow==2.7.0
+bert-score==0.3.8
+transformers==4.12.5
+t5
+os
+warnings
+time
+gin
+functools
+subprocess
+random
+gsutil
