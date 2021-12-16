@@ -208,12 +208,6 @@ encoder/SelfAttention.relative_attention_num_buckets = 32
 encoder/SelfAttention.relative_attention_type = 'bias_shared'
 encoder/SelfAttention.shared_kv = False
 
-# Parameters for SentencePieceVocabulary:
-# ==============================================================================
-SentencePieceVocabulary.extra_ids = 100
-SentencePieceVocabulary.sentencepiece_model_file = \
-    @t5.models.mesh_transformer.get_sentencepiece_model_path()
-
 # Parameters for serialize_num_microbatches:
 # ==============================================================================
 serialize_num_microbatches.tokens_per_microbatch_per_replica = 8192
