@@ -12,6 +12,7 @@ import t5
 import gin
 import subprocess
 from random import shuffle
+from data import files_name
 
 print(tensorflow.__version__)
 
@@ -39,7 +40,7 @@ gin.parse_config_file(
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = list(map(lambda x: x.strip(), subprocess.run(['gsutil', 'ls', 'gs://vie_projects/data/cc100_1024/cc100*.txt'], stdout=subprocess.PIPE).stdout.splitlines()))
+    files_name_cc100 = files_name
 
     shuffle(files_name_cc100)
 
