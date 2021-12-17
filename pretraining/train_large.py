@@ -30,7 +30,7 @@ if ON_CLOUD:
   TPU_TOPOLOGY = "v3-8"
   auth.authenticate_user()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
-  tensorflow_gcs_config.configure_gcs_from_colab_auth()
+  # tensorflow_gcs_config.configure_gcs_from_colab_auth()
 
 tf.disable_v2_behavior()
 
