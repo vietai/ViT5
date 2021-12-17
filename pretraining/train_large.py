@@ -20,6 +20,37 @@ TPU_TOPOLOGY = 'v3-8'
 TPU_ADDRESS = '10.79.121.146'
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
+ON_CLOUD = True
+
+if ON_CLOUD:
+  print("Setting up GCS access...")
+  import tensorflow_gcs_config
+  from google.colab import auth
+  # Set credentials for GCS reading/writing from Colab and TPU.
+  TPU_TOPOLOGY = "v3-8"
+  auth.authenticate_user()
+  tf.config.experimental_connect_to_host(TPU_ADDRESS)
+  tensorflow_gcs_config.configure_gcs_from_colab_auth()
+
+tf.disable_v2_behavior()
+
+# Improve logging.
+from contextlib import contextmanager
+import logging as py_logging
+
+if ON_CLOUD:
+  tf.get_logger().propagate = False
+  py_logging.root.setLevel('INFO')
+
+@contextmanager
+def tf_verbosity_level(level):
+  og_level = tf.logging.get_verbosity()
+  tf.logging.set_verbosity(level)
+  yield
+  tf.logging.set_verbosity(og_level)
+
+
+
 tf.disable_v2_behavior()
 
 # Improve logging.
