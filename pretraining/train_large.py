@@ -17,7 +17,7 @@ from data import files_name
 print(tensorflow.__version__)
 
 TPU_TOPOLOGY = 'v3-8'
-TPU_ADDRESS = '10.109.144.114'
+TPU_ADDRESS = '	10.79.121.146'
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
 tf.disable_v2_behavior()
@@ -54,7 +54,9 @@ def dumping_dataset(split, shuffle_files = False):
 
     return ds
 
-vocab = "gs://t5_training/models/spm/vie/wiki_vietnamese_vocab.model"
+MODEL_SIZE = 'large'
+
+vocab = "gs://translationv2/models/viT5_1024_{MODEL_SIZE}/wiki_vietnamese_vocab.model"
 t5.data.TaskRegistry.remove('dumping_dataset')
 t5.data.TaskRegistry.add(
     'dumping_dataset',
@@ -83,7 +85,6 @@ t5.data.MixtureRegistry.add(
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
 
 
-MODEL_SIZE = 'large'
 model_parallelism, train_batch_size, keep_checkpoint_max = {
     'small': (1, 256, 16),
     'base': (2, 128, 8),
@@ -92,7 +93,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     '11B': (8, 16, 1),
 }[MODEL_SIZE]
 
-model_dir = f'gs://t5_training/models/vie/viT5_1024/{MODEL_SIZE}'
+model_dir = f'gs://translationv2/models/viT5_1024_{MODEL_SIZE}'
 
 model = models.MtfModel(
   model_dir = model_dir,
