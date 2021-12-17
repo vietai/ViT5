@@ -17,7 +17,7 @@ from data import files_name
 print(tensorflow.__version__)
 
 TPU_TOPOLOGY = 'v3-8'
-TPU_ADDRESS = '	10.79.121.146'
+TPU_ADDRESS = '10.79.121.146'
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
 tf.disable_v2_behavior()
