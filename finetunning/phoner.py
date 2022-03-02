@@ -9,7 +9,6 @@ from t5 import models
 import t5
 import gin
 from random import shuffle
-from data import files_name
 from t5.models import MtfModel
 
 print(tensorflow.__version__)
