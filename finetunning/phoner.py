@@ -137,7 +137,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "large": (8, 256, 4),
     "3B": (8, 16, 1),
     "11B": (8, 16, 1)}[MODEL_SIZE]
-PRETRAINED_DIR = "gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
+PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
 
 MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
 
