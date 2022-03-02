@@ -71,15 +71,13 @@ def tf_verbosity_level(level):
   tf.logging.set_verbosity(og_level)
 
 task = 'phoner'
-vocab = "gs://t5_training/models/spm/vie/wiki_vietnamese_vocab.model"
-
 vocab = f"gs://translationv2/models/viT5_1024_large/wiki_vietnamese_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     if split == 'train':
       ds = tf.data.TextLineDataset(
             [
-            'gs://t5_training/t5-data/vi_data/PhoNER/pho_ner_train.tsv',
+            'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
             # 'gs://t5_training/t5-data/vi_data/PhoNER/pho_ner_dev.tsv',
             ]
           )
@@ -139,9 +137,9 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "large": (8, 256, 4),
     "3B": (8, 16, 1),
     "11B": (8, 16, 1)}[MODEL_SIZE]
-PRETRAINED_DIR = "gs://t5_training/models/vie/viT5_large_1024/"
+PRETRAINED_DIR = "gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
 
-MODEL_DIR = f"gs://t5_training/models/vie/PhoNER_viT5_large_1024"
+MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
