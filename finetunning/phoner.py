@@ -110,10 +110,8 @@ def ner_preprocessor(ds):
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
-print("A few raw validation examples...")
-for ex in tfds.as_numpy(dumping_dataset("train").take(5)):
-  # print(base64.b64encode(ex['text']))
-  print(ex['target'].decode("utf-8"))
+
+
 t5.data.TaskRegistry.remove(task)
 t5.data.TaskRegistry.add(
     task,
