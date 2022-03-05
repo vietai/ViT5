@@ -187,7 +187,7 @@ for checkpoint in checkpoints:
     output_file = 'predict_output.txt'
 
     # Write out the supplied questions to text files.
-    os.system(f"gsutil cp {os.path.join('gs://t5_training/t5-data/vi_data', dir, input_file)} .") 
+    os.system(f"gsutil cp {os.path.join('gs://translationv2/data', dir, input_file)} .") 
 
     with open('predict_input.txt', 'w') as out:
       for line in open(input_file):
