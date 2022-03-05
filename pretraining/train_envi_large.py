@@ -10,14 +10,19 @@ import gin
 from t5 import models
 import t5
 import gin
-import subprocess
+import argparse
 from random import shuffle
 from data import files_name
 
 print(tensorflow.__version__)
 
+parser = argparse.ArgumentParser(description='Finetunning ViT5')
+parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
+args = parser.parse_args()
+
+
 TPU_TOPOLOGY = 'v3-8'
-TPU_ADDRESS = '10.79.121.146'
+TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
 ON_CLOUD = True
