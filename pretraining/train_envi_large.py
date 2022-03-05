@@ -92,7 +92,7 @@ def dumping_dataset(split, shuffle_files = False):
 
 MODEL_SIZE = 'large'
 
-vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.vocab"
+vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
 t5.data.TaskRegistry.remove('dumping_dataset')
 t5.data.TaskRegistry.add(
     'dumping_dataset',

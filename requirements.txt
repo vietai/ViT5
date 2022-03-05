@@ -2,6 +2,7 @@ tensorflow==2.6.0
 bert-score==0.3.8
 transformers==4.12.5
 t5==0.9.3
+tensorflow-estimator==2.6.0
 # os==latest 
 # warnings==latest
 # time==latest
