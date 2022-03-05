@@ -164,3 +164,58 @@ model.finetune(
     pretrained_model_dir=PRETRAINED_DIR,
     finetune_steps=FINETUNE_STEPS
 )
+
+
+tasks = [
+         ['PhoNER', "pho_ner"], 
+    ]
+
+
+import os
+checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
+
+for checkpoint in checkpoints:
+  for t in tasks:
+    dir = t[0]
+    task = t[1]
+
+    
+    input_file = task + '_test_input.txt'
+    output_file = 'predict_output.txt'
+
+    # Write out the supplied questions to text files.
+    os.sytem(f"gsutil cp {os.path.join('gs://t5_training/t5-data/vi_data', dir, input_file)}") 
+
+    with open('predict_input.txt', 'w') as out:
+      for line in open(input_file):
+        line = line.replace('pho_ner', 'phoner')
+        out.write(line)
+        
+
+    predict_inputs_path = 'predict_input.txt'
+    predict_outputs_path = output_file
+    # Manually apply preprocessing by prepending "triviaqa question:".
+
+    # Ignore any logging so that we only see the model's answers to the questions.
+    with tf_verbosity_level('ERROR'):
+      model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
+      model.predict(
+          input_file=predict_inputs_path,
+          output_file=predict_outputs_path,
+          # Select the most probable output token at each step.
+          vocabulary=t5.data.SentencePieceVocabulary(vocab),
+          checkpoint_steps=checkpoint,
+          temperature=0,
+      )
+
+    # The output filename will have the checkpoint appended so we glob to get 
+    # the latest.
+    prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
+    print("Predicted task : " + task)
+    print("\nPredictions using checkpoint %s:\n" % checkpoint)
+    # with tf.io.gfile.GFile(prediction_files[-1]) as f:
+    #   for q, a in zip(questions, f):
+    #     if q:
+    #       print("Q: " + q)
+    #       print("A: " + a)
+    #       print()
