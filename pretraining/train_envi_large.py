@@ -109,9 +109,9 @@ t5.data.TaskRegistry.add(
 
 
 
-t5.data.MixtureRegistry.remove('all_T5')
+t5.data.MixtureRegistry.remove('all_enviT5')
 t5.data.MixtureRegistry.add(
-    'all_T5',
+    'all_enviT5',
     [
         'dumping_dataset',
     ],
@@ -144,4 +144,4 @@ model = models.MtfModel(
   iterations_per_loop = 100,
 )
 
-model.train(mixture_or_task_name = 'all_T5', steps = 1000000)
+model.train(mixture_or_task_name = 'all_enviT5', steps = 1000000)
