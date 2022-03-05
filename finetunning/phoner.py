@@ -1,3 +1,4 @@
+from tabnanny import check
 import tensorflow
 import functools
 import warnings
@@ -173,6 +174,8 @@ tasks = [
 
 import os
 checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
+print(checkpoints)
+
 
 for checkpoint in checkpoints:
   for t in tasks:
