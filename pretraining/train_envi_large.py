@@ -76,7 +76,7 @@ gin.parse_config_file(
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = ['gs://translationv2/data/cc100_envi_1024/train_envi_{i}.txt' for i in range(0,310)]
+    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_1024/train_envi_{i}.txt' for i in range(0,310)]
 
     shuffle(files_name_cc100)
 
