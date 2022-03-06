@@ -11,7 +11,7 @@ include 'pretrain.gin'
 
 MIXTURE_OR_TASK_NAME = "dumping_dataset"
 TASK_FEATURE_LENGTHS = {"inputs": 1024, "targets": 1024}
-TRAIN_STEPS = 100000
+TRAIN_STEPS = 1000000
 DROPOUT_RATE = 0.0
 BATCH_SIZE = 256
 
