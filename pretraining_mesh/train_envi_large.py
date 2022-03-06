@@ -10,14 +10,19 @@ import gin
 from t5 import models
 import t5
 import gin
-import subprocess
+import argparse
 from random import shuffle
 from data import files_name
 
 print(tensorflow.__version__)
 
+parser = argparse.ArgumentParser(description='Finetunning ViT5')
+parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
+args = parser.parse_args()
+
+
 TPU_TOPOLOGY = 'v3-8'
-TPU_ADDRESS = '10.79.121.146'
+TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
 ON_CLOUD = True
@@ -25,7 +30,6 @@ ON_CLOUD = True
 if ON_CLOUD:
   print("Setting up GCS access...")
   # import tensorflow_gcs_config
-  from google.colab import auth
   # Set credentials for GCS reading/writing from Colab and TPU.
   TPU_TOPOLOGY = "v3-8"
   # auth.authenticate_user()
@@ -66,12 +70,12 @@ def tf_verbosity_level(level):
   tf.logging.set_verbosity(og_level)
 
 gin.parse_config_file(
-        '../configs/large_operative_config.gin'
+        '../configs/t5/large_operative_config.gin'
     )
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = files_name
+    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_1024/train_envi_{i}.txt' for i in range(0,310)]
 
     shuffle(files_name_cc100)
 
@@ -87,7 +91,7 @@ def dumping_dataset(split, shuffle_files = False):
 
 MODEL_SIZE = 'large'
 
-vocab = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/wiki_vietnamese_vocab.model"
+vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
 t5.data.TaskRegistry.remove('dumping_dataset')
 t5.data.TaskRegistry.add(
     'dumping_dataset',
@@ -104,9 +108,9 @@ t5.data.TaskRegistry.add(
 
 
 
-t5.data.MixtureRegistry.remove('all_vieT5')
+t5.data.MixtureRegistry.remove('all_enviT5')
 t5.data.MixtureRegistry.add(
-    'all_vieT5',
+    'all_enviT5',
     [
         'dumping_dataset',
     ],
@@ -118,13 +122,13 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
 
 model_parallelism, train_batch_size, keep_checkpoint_max = {
     'small': (1, 256, 16),
-    'base': (2, 128, 8),
-    'large': (8, 64, 4),
+    'base': (8, 256, 8),
+    'large': (8, 256, 4),
     '3B': (8, 16, 1),
     '11B': (8, 16, 1),
 }[MODEL_SIZE]
 
-model_dir = f'gs://translationv2/models/viT5_1024_{MODEL_SIZE}'
+model_dir = f'gs://translationv2/models/enviT5_1024_{MODEL_SIZE}'
 
 model = models.MtfModel(
   model_dir = model_dir,
@@ -139,4 +143,4 @@ model = models.MtfModel(
   iterations_per_loop = 100,
 )
 
-model.train(mixture_or_task_name = 'all_vieT5', steps = 1000000)
+model.train(mixture_or_task_name = 'all_enviT5', steps = 1000000)
