@@ -61,8 +61,7 @@ train_script.train:
   summarize_config_fn = @gin_utils.summarize_gin_config
 
 partitioning.PjitPartitioner:
-  num_partitions = 1
-  model_parallel_submesh = None
+  model_parallel_submesh = (1, 1, 1, 1)
   logical_axis_rules = @partitioning.standard_logical_axis_rules()
 
 train/utils.DatasetConfig:

@@ -16,9 +16,7 @@ LOSS_NORMALIZING_FACTOR = None
 # Dropout should be specified in the "run" files
 DROPOUT_RATE = %gin.REQUIRED
 
-# Vocabulary (shared by encoder and decoder)
-VOCABULARY = @seqio.SentencePieceVocabulary()
-seqio.SentencePieceVocabulary.sentencepiece_model_file = "gs://t5-data/vocabs/cc_all.32000.100extra/sentencepiece.model"
+
 
 # ------------------- Optimizer ------------------------------------------------
 # `learning_rate` is set by `Trainer.learning_rate_fn`.

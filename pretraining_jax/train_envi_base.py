@@ -43,36 +43,13 @@ from t5x import trainer as trainer_lib
 from t5x import utils
 import tensorflow as tf
 
-import requests
-from jax.config import config
-
-TPU_DRIVER_MODE = 0
-
-
-def setup_tpu():
-  """Sets up Colab to run on TPU.
-  Note: make sure the Colab Runtime is set to Accelerator: TPU.
-  """
-  global TPU_DRIVER_MODE
-
-  if not TPU_DRIVER_MODE:
-    colab_tpu_addr = os.environ['COLAB_TPU_ADDR'].split(':')[0]
-    url = f'http://{colab_tpu_addr}:8475/requestversion/tpu_driver0.1-dev20211030'
-    requests.post(url)
-    TPU_DRIVER_MODE = 1
-
-  # The following is required to use TPU Driver as JAX's backend.
-  config.FLAGS.jax_xla_backend = "tpu_driver"
-  config.FLAGS.jax_backend_target = "grpc://" + os.environ['COLAB_TPU_ADDR']
-setup_tpu()
-print('TPU devies')
-print(jax.local_devices())
-
-
 # Automatically search for gin files relative to the T5X package.
 _DEFAULT_GIN_SEARCH_PATHS = [
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'configs/t5x')
 ]
+
+
 PyTreeDef = type(jax.tree_structure(None))
 P = partitioning.PartitionSpec
 # Special key that used to distinguish train metrics.

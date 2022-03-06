@@ -3,6 +3,7 @@ import t5
 from random import shuffle
 import tensorflow as tf
 from t5.data import preprocessors
+import functools
 
 TaskRegistry = seqio.TaskRegistry
 
@@ -17,7 +18,7 @@ DEFAULT_OUTPUT_FEATURES = {
 }
 
 
-def dumping_dataset(split, shuffle_files = False):
+def dumping_dataset(split, shuffle_files = False, seed=None):
     del shuffle_files
     files_name_cc100 = [f'gs://translationv2/data/cc100_envi_1024/train_envi_{i}.txt' for i in range(0,310)]
 
@@ -33,10 +34,15 @@ def dumping_dataset(split, shuffle_files = False):
 
     return ds
 
+source = seqio.FunctionDataSource(
+    dataset_fn=dumping_dataset,
+    splits=["train"]
+)
+
 TaskRegistry.remove('dumping_dataset')
 TaskRegistry.add(
     "dumping_dataset",
-    source=dumping_dataset,
+    source=source,
     preprocessors=[
         functools.partial(
             preprocessors.rekey, key_map={
@@ -47,7 +53,7 @@ TaskRegistry.add(
         # seqio.CacheDatasetPlaceholder(),
         preprocessors.span_corruption,
         seqio.preprocessors.append_eos_after_trim,
-
     ],
     output_features=DEFAULT_OUTPUT_FEATURES,
-    metric_fns=[])
+    metric_fns=[]
+)
