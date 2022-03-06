@@ -46,10 +46,14 @@ from task import seqio
 from jax.config import config
 
 
-TPU_ADDRESS = f'grpc://10.16.181.10:8470'
-
+import os
+import requests
+TPU_ADDRESS="10.16.181.10"
+url = 'http://' + TPU_ADDRESS + ':8475/requestversion/tpu_driver_nightly'
+resp = requests.post(url)
 config.FLAGS.jax_xla_backend = "tpu_driver"
-config.FLAGS.jax_backend_target = TPU_ADDRESS
+config.FLAGS.jax_backend_target = 'grpc://' + TPU_ADDRESS + ':8470'
+print('Registered TPU:', config.FLAGS.jax_backend_target)
 
 
 # Automatically search for gin files relative to the T5X package.
