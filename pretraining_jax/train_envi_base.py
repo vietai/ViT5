@@ -43,6 +43,14 @@ from t5x import trainer as trainer_lib
 from t5x import utils
 import tensorflow as tf
 from task import seqio
+from jax.config import config
+
+
+TPU_ADDRESS = f'grpc://10.16.181.10:8470'
+
+config.FLAGS.jax_xla_backend = "tpu_driver"
+config.FLAGS.jax_backend_target = TPU_ADDRESS
+
 
 # Automatically search for gin files relative to the T5X package.
 _DEFAULT_GIN_SEARCH_PATHS = [
