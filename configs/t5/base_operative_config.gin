@@ -10,6 +10,7 @@ d_ff = 2048
 d_kv = 64
 d_model = 768
 dropout_rate = 0.1
+inputs_length = 1024
 mean_noise_span_length = 3.0
 noise_density = 0.15
 num_heads = 12
