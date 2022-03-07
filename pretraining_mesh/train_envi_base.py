@@ -125,7 +125,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
 
 model_parallelism, train_batch_size, keep_checkpoint_max = {
     'small': (1, 256, 16),
-    'base': (8, 128, 8),
+    'base': (4, 256, 8),
     'large': (8, 256, 4),
     '3B': (8, 16, 1),
     '11B': (8, 16, 1),
