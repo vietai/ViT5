@@ -1,3 +1,4 @@
+from unittest.util import _MAX_LENGTH
 import tensorflow
 import functools
 import os
@@ -18,12 +19,14 @@ print(tensorflow.__version__)
 
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
+parser.add_argument('-length', dest='length', type=int, help='sequence length', default=512)
 args = parser.parse_args()
 
 
 TPU_TOPOLOGY = 'v3-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
+MAX_LENGTH = args.length
 
 ON_CLOUD = True
 
@@ -75,7 +78,7 @@ gin.parse_config_file(
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_1024/train_envi_{i}.txt' for i in range(0,310)]
+    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_{MAX_LENGTH}/train_envi_{i}.txt' for i in range(0,310)]
 
     shuffle(files_name_cc100)
 
@@ -128,7 +131,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     '11B': (8, 16, 1),
 }[MODEL_SIZE]
 
-model_dir = f'gs://translationv2/models/enviT5_1024_{MODEL_SIZE}'
+model_dir = f'gs://translationv2/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}'
 
 model = models.MtfModel(
   model_dir = model_dir,
@@ -136,7 +139,7 @@ model = models.MtfModel(
   tpu_topology = TPU_TOPOLOGY,
   model_parallelism = model_parallelism,
   batch_size = train_batch_size,
-  sequence_length = {'inputs': 1024, 'targets': 1024},
+  sequence_length = {'inputs': MAX_LENGTH, 'targets': MAX_LENGTH},
   learning_rate_schedule = 0.001,
   save_checkpoints_steps = 2000,
   keep_checkpoint_max = 5,
