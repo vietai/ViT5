@@ -43,22 +43,6 @@ from t5x import trainer as trainer_lib
 from t5x import utils
 import tensorflow as tf
 from task import seqio
-from jax.config import config
-
-
-import os
-import requests
-TPU_ADDRESS="10.16.181.10"
-url = 'http://' + TPU_ADDRESS + ':8475/requestversion/tpu_driver_nightly'
-resp = requests.post(url)
-config.FLAGS.jax_xla_backend = "tpu_driver"
-config.FLAGS.jax_backend_target = 'grpc://' + TPU_ADDRESS + ':8470'
-print('Registered TPU:', config.FLAGS.jax_backend_target)
-
-last_device = jax.devices()[-1]
-device_kind = last_device.device_kind
-
-print("TPU Device " , device_kind)
 
 # Automatically search for gin files relative to the T5X package.
 _DEFAULT_GIN_SEARCH_PATHS = [
