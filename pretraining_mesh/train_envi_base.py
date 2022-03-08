@@ -32,8 +32,6 @@ ON_CLOUD = True
 
 if ON_CLOUD:
   print("Setting up GCS access...")
-  # import tensorflow_gcs_config
-  # Set credentials for GCS reading/writing from Colab and TPU.
   TPU_TOPOLOGY = "v3-8"
   # auth.authenticate_user()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
@@ -78,7 +76,7 @@ gin.parse_config_file(
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_{MAX_LENGTH}/train_envi_{i}.txt' for i in range(0,310)]
+    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_{MAX_LENGTH}_tags/train_envi_{i}.txt' for i in range(0,310)]
 
     shuffle(files_name_cc100)
 
@@ -131,7 +129,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     '11B': (8, 16, 1),
 }[MODEL_SIZE]
 
-model_dir = f'gs://translationv2/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}'
+model_dir = f'gs://translationv2/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}_tags'
 
 model = models.MtfModel(
   model_dir = model_dir,
