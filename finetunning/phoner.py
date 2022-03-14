@@ -17,7 +17,7 @@ print(tensorflow.__version__)
 
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
-parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=0)
+parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=0)
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v3-8'
