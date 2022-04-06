@@ -110,7 +110,7 @@ t5.data.TaskRegistry.remove(task)
 t5.data.TaskRegistry.add(
     task,
     dataset_fn=dumping_dataset,
-    splits=[],
+    splits=['train'],
     text_preprocessor=[translate_preprocessor],
     metric_fns=[],
     output_features=t5.data.Feature(vocabulary=t5.data.SentencePieceVocabulary(vocab))
