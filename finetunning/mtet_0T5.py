@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
 
-parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16265)
+parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v2-8'
