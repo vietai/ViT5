@@ -159,6 +159,6 @@ FINETUNE_STEPS = args.steps
 
 model.finetune(
     mixture_or_task_name="mtet_all",
-    # pretrained_model_dir=PRETRAINED_DIR,
+    pretrained_model_dir=MODEL_DIR,
     finetune_steps=FINETUNE_STEPS
 )
