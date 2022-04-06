@@ -135,7 +135,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "11B": (8, 16, 1)}[MODEL_SIZE]
 
 
-# PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
+PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/0T5/"
 
 MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_0T5"
 
@@ -159,6 +159,6 @@ FINETUNE_STEPS = args.steps
 
 model.finetune(
     mixture_or_task_name="mtet_all",
-    pretrained_model_dir=MODEL_DIR,
+    pretrained_model_dir=PRETRAINED_DIR,
     finetune_steps=FINETUNE_STEPS
 )
