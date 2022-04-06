@@ -19,7 +19,7 @@ parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi t
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=0)
 args = parser.parse_args()
 
-TPU_TOPOLOGY = 'v3-8'
+TPU_TOPOLOGY = 'v2-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
@@ -73,12 +73,12 @@ def tf_verbosity_level(level):
   tf.logging.set_verbosity(og_level)
 
 task = args.task
-vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
+vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     ds = tf.data.TextLineDataset(
         [
-        f'gs://translationv2/data/tsv_v2/train_{task}.tsv',
+        f'gs://vien-translation/data/mtet/train_{task}.tsv',
         ]
         )
     ds = ds.map(
@@ -137,7 +137,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
 
 # PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
 
-MODEL_DIR = f"gs://translationv2/models/enviT5_finetune/mtet_no_checkpoint"
+MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_0T5"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -150,9 +150,9 @@ model = MtfModel(
     batch_size=train_batch_size,
     sequence_length={"inputs": 128, "targets": 128},
     learning_rate_schedule=0.001,
-    save_checkpoints_steps=500,
+    save_checkpoints_steps=10000,
     keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
-    iterations_per_loop=100,
+    # iterations_per_loop=100,
 )
 
 FINETUNE_STEPS = args.steps
