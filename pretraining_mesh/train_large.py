@@ -139,4 +139,4 @@ model = models.MtfModel(
   iterations_per_loop = 100,
 )
 
-model.train(mixture_or_task_name = 'all_vieT5', steps = 1000000)
+model.train(mixture_or_task_name = 'all_vieT5', steps = 2000000)

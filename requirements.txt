@@ -1,15 +1,7 @@
-tensorflow==2.6.0
+tensorflow
 bert-score==0.3.8
 transformers==4.12.5
 t5==0.9.3
 tensorflow-estimator==2.6.0
 tensorflow-text==2.2
 keras==2.6.0
-# os==latest 
-# warnings==latest
-# time==latest
-# gin==latest
-# functools==latest
-# subprocess==latest
-# random==latest
-# gsutil==latest
