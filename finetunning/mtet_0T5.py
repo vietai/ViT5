@@ -170,7 +170,7 @@ input_file = f'tst2013.{task[0:2]}.unfix'
 output_file = f'{task}_predict_output.txt'
 
 with open('predict_input.txt', 'w') as out:
-  for line in open(input_file):
+  for line in open(f'../data/{input_file}'):
     out.write(f"{task}: {line}")
     
 
