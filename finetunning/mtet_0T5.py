@@ -196,7 +196,7 @@ prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
 
 predictions = []
 references = []
-with open(f'tst2013.{task[2:4]}.unfix') as file:
+with open(f'../data/tst2013.{task[2:4]}.unfix') as file:
   for line in file:
     predictions.append(line.strip())
 with open(prediction_files[0]) as file:

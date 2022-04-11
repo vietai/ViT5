@@ -1,3 +1,3 @@
 import os
 
-os.system('pip install -q t5 tensorflow-text==2.2 google.colab')
+os.system('pip install -q t5 tensorflow-text==2.2 google.colab && pip install datasets')
