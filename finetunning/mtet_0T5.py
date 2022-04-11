@@ -198,11 +198,12 @@ predictions = []
 references = []
 with open(f'../data/tst2013.{task[2:4]}.unfix') as file:
   for line in file:
-    predictions.append(line.strip())
+    predictions.append([line.strip()])
 with open(prediction_files[0]) as file:
   for line in file:
-    references.append(line.strip())
+    references.append([line.strip()])
 
 metric = load_metric("sacrebleu")
 result = metric.compute(predictions=predictions, references=references)
 result = {"bleu": result["score"]}
+print(result)
