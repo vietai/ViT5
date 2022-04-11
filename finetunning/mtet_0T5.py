@@ -166,10 +166,6 @@ FINETUNE_STEPS = args.steps
 
 model.train(mixture_or_task_name = 'mtet_all', steps = FINETUNE_STEPS)
 
-
-checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
-print(checkpoints)
-
 input_file = f'tst2013.{task[0:2]}.unfix'
 output_file = f'{task}_predict_output.txt'
 
@@ -203,7 +199,7 @@ references = []
 with open(f'../data/tst2013.{task[2:4]}.unfix') as file:
   for line in file:
     predictions.append([line.strip()])
-with open(prediction_files[0]) as file:
+with open(prediction_files[-1]) as file:
   for line in file:
     references.append([line.strip()])
 
