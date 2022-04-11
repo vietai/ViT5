@@ -1,3 +1,4 @@
+from tabnanny import check
 import tensorflow
 import functools
 import warnings
@@ -5,19 +6,18 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import argparse
 import tensorflow.compat.v1 as tf
 import gin
+from t5 import models
 import t5
-import os
+import gin
+from random import shuffle
 from t5.models import MtfModel
-from datasets import load_metric
 
 print(tensorflow.__version__)
 
 
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
-parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
-
-parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
+parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=0)
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v2-8'
@@ -39,9 +39,7 @@ if ON_CLOUD:
   # tensorflow_gcs_config.configure_gcs_from_colab_auth()
 
 tf.disable_v2_behavior()
-gin.parse_config_file(
-        '../configs/t5/base_operative_config.gin'
-    )
+
 # Improve logging.
 from contextlib import contextmanager
 import logging as py_logging
@@ -73,24 +71,30 @@ def tf_verbosity_level(level):
   yield
   tf.logging.set_verbosity(og_level)
 
-task = args.task
-vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
+task = 'phoner'
+vocab = f"gs://translationv2/models/viT5_1024_large/wiki_vietnamese_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    ds = tf.data.TextLineDataset(
-        [
-        f'gs://vien-translation/data/mtet/train_{task}.tsv',
-        ]
-        )
+    if split == 'train':
+      ds = tf.data.TextLineDataset(
+            [
+            'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
+            # 'gs://t5_training/t5-data/vi_data/PhoNER/pho_ner_dev.tsv',
+            ]
+          )
+    else:
+      ds = tf.data.TextLineDataset(
+            [
+                        ]
+          )
     ds = ds.map(
         functools.partial(tf.io.decode_csv, record_defaults=["", ""],
                           field_delim="\t", use_quote_delim=False),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     ds = ds.map(lambda *ex: dict(zip(["input", "target"], ex)))
-    ds = ds.shuffle(buffer_size=1000000)
     return ds
 
-def translate_preprocessor(ds):
+def ner_preprocessor(ds):
   def normalize_text(text):
     """Lowercase and remove quotes from a TensorFlow string."""
     return text
@@ -111,34 +115,32 @@ t5.data.TaskRegistry.remove(task)
 t5.data.TaskRegistry.add(
     task,
     dataset_fn=dumping_dataset,
-    splits=['train'],
-    text_preprocessor=[translate_preprocessor],
+    splits=["train", "validation"],
+    text_preprocessor=[ner_preprocessor],
     metric_fns=[],
     output_features=t5.data.Feature(vocabulary=t5.data.SentencePieceVocabulary(vocab))
 )
 
-t5.data.MixtureRegistry.remove("mtet_all")
+t5.data.MixtureRegistry.remove("ner_all")
 t5.data.MixtureRegistry.add(
-    "mtet_all",
+    "ner_all",
     [task],
      default_rate=1.0,
 )
 
 
-MODEL_SIZE = "base"
+MODEL_SIZE = "large"
 
 # Set parallelism and batch size to fit on v3-8 TPU (if possible).
 model_parallelism, train_batch_size, keep_checkpoint_max = {
     "small": (1, 256, 16),
-    "base": (4, 256, 8),
+    "base": (8, 128, 8),
     "large": (8, 256, 4),
     "3B": (8, 16, 1),
     "11B": (8, 16, 1)}[MODEL_SIZE]
+PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
 
-
-# PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/0T5/"
-
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_0T5"
+MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -149,60 +151,74 @@ model = MtfModel(
     tpu_topology=TPU_TOPOLOGY,
     model_parallelism=model_parallelism,
     batch_size=train_batch_size,
-    sequence_length={"inputs": 128, "targets": 128},
+    sequence_length={"inputs": 512, "targets": 512},
     learning_rate_schedule=0.001,
-    save_checkpoints_steps=5000,
+    save_checkpoints_steps=500,
     keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
-    # iterations_per_loop=100,
+    iterations_per_loop=100,
 )
 
 FINETUNE_STEPS = args.steps
 
-# model.finetune(
-#     mixture_or_task_name="mtet_all",
-#     pretrained_model_dir=PRETRAINED_DIR,
-#     finetune_steps=FINETUNE_STEPS
-# )
+model.finetune(
+    mixture_or_task_name="ner_all",
+    pretrained_model_dir=PRETRAINED_DIR,
+    finetune_steps=FINETUNE_STEPS
+)
 
-model.train(mixture_or_task_name = 'mtet_all', steps = FINETUNE_STEPS)
 
-input_file = f'tst2013.{task[0:2]}.unfix'
-output_file = f'{task}_predict_output.txt'
+tasks = [
+         ['PhoNER', "pho_ner"], 
+    ]
 
-with open('predict_input.txt', 'w') as out:
-  for line in open(input_file):
-    out.write(f"{task}: {line}")
+
+import os
+checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
+print(checkpoints)
+
+
+for checkpoint in checkpoints:
+  for t in tasks:
+    dir = t[0]
+    task = t[1]
+
     
+    input_file = task + '_test_input.txt'
+    output_file = 'predict_output.txt'
 
-predict_inputs_path = 'predict_input.txt'
-predict_outputs_path = output_file
-# Manually apply preprocessing by prepending "triviaqa question:".
+    # Write out the supplied questions to text files.
+    os.system(f"gsutil cp {os.path.join('gs://translationv2/data', dir, input_file)} .") 
 
-# Ignore any logging so that we only see the model's answers to the questions.
-with tf_verbosity_level('ERROR'):
-  model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
-  model.predict(
-      input_file=predict_inputs_path,
-      output_file=predict_outputs_path,
-      # Select the most probable output token at each step.
-      vocabulary=t5.data.SentencePieceVocabulary(vocab),
-      checkpoint_steps=-1,
-      temperature=0,
-  )
+    with open('predict_input.txt', 'w') as out:
+      for line in open(input_file):
+        line = line.replace('pho_ner', 'phoner')
+        out.write(line)
+        
 
-# The output filename will have the checkpoint appended so we glob to get 
-# the latest.
-prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
+    predict_inputs_path = 'predict_input.txt'
+    predict_outputs_path = output_file
+    # Manually apply preprocessing by prepending "triviaqa question:".
 
-predictions = []
-references = []
-with open(f'tst2013.{task[2:4]}.unfix') as file:
-  for line in file:
-    predictions.append(line.strip())
-with open(prediction_files[0]) as file:
-  for line in file:
-    references.append(line.strip())
+    # Ignore any logging so that we only see the model's answers to the questions.
+    with tf_verbosity_level('ERROR'):
+      model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
+      model.predict(
+          input_file=predict_inputs_path,
+          output_file=predict_outputs_path,
+          # Select the most probable output token at each step.
+          vocabulary=t5.data.SentencePieceVocabulary(vocab),
+          checkpoint_steps=checkpoint,
+          temperature=0,
+      )
 
-metric = load_metric("sacrebleu")
-result = metric.compute(predictions=predictions, references=references)
-result = {"bleu": result["score"]}
+    # The output filename will have the checkpoint appended so we glob to get 
+    # the latest.
+    prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
+    print("Predicted task : " + task)
+    print("\nPredictions using checkpoint %s:\n" % checkpoint)
+    # with tf.io.gfile.GFile(prediction_files[-1]) as f:
+    #   for q, a in zip(questions, f):
+    #     if q:
+    #       print("Q: " + q)
+    #       print("A: " + a)
+    #       print()
