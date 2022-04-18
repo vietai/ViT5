@@ -100,9 +100,9 @@ def translate_preprocessor(ds):
     return {
         "inputs":
             tf.strings.join(
-                [f"{task}: {task[0:2]}: ", normalize_text(ex["input"])]),
+                [f"{task[0:2]}: ", normalize_text(ex["input"])]),
         "targets": tf.strings.join(
-                [f"{task[2:4]}: ", normalize_text(ex["target"])])
+                [f"", normalize_text(ex["target"])])
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -137,9 +137,9 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "11B": (8, 16, 1)}[MODEL_SIZE]
 
 
-PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_604300/"
+PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_727500/"
 
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_604300enviT5"
+MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_727500enviT5"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -177,7 +177,7 @@ output_file = f'{task}_predict_output.txt'
 
 with open('predict_input.txt', 'w') as out:
   for line in open(f'../data/{input_file}'):
-    out.write(f"{task}: {line}")
+    out.write(f"{task[0:2]}: {line}")
     
 
 predict_inputs_path = 'predict_input.txt'
