@@ -215,7 +215,7 @@ with open(prediction_files[-1]) as file:
   for line in file:
     references.append([line.strip()])
 
-metric = load_metric("sacrebleu")
+metric = load_metric("sacrebleu", keep_in_memory=True)
 result = metric.compute(predictions=predictions, references=references)
 result = {"bleu": result["score"]}
 print(result)
