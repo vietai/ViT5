@@ -16,6 +16,7 @@ print(tensorflow.__version__)
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
+parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
 
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
@@ -171,14 +172,19 @@ model.finetune(
     finetune_steps=FINETUNE_STEPS
 )
 
-
-input_file = f'tst2013.{task[0:2]}.unfix'
-output_file = f'{task}_predict_output.txt'
-
+eval = args.eval
+if eval == 'tst':
+  input_file = f'tst2013.{task[0:2]}.unfix'
+  output_file = f'{task}_predict_output.txt'
+  label_file = f"tst2013.{task[2:4]}.unfix"
+elif eval =='phomt':
+  input_file = f'test.{task[0:2]}'
+  output_file = f'{task}_predict_output.txt'
+  label_file = f'test.{task[2:4]}'
+      
 with open('predict_input.txt', 'w') as out:
   for line in open(f'../data/{input_file}'):
     out.write(f"{task[0:2]}: {line}")
-    
 
 predict_inputs_path = 'predict_input.txt'
 predict_outputs_path = output_file
@@ -202,7 +208,7 @@ prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
 
 predictions = []
 references = []
-with open(f'../data/tst2013.{task[2:4]}.unfix') as file:
+with open(f'../data/{eval}/{label_file}') as file:
   for line in file:
     predictions.append([line.strip()])
 with open(prediction_files[-1]) as file:
