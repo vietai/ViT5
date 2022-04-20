@@ -183,7 +183,7 @@ elif eval =='phomt':
   label_file = f'test.{task[2:4]}'
       
 with open('predict_input.txt', 'w') as out:
-  for line in open(f'../data/{input_file}'):
+  for line in open(f'../data/{eval}/{input_file}'):
     out.write(f"{task[0:2]}: {line}")
 
 predict_inputs_path = 'predict_input.txt'
