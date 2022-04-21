@@ -23,7 +23,7 @@ parser.add_argument('-length', dest='length', type=int, help='sequence length', 
 args = parser.parse_args()
 
 
-TPU_TOPOLOGY = 'v3-8'
+TPU_TOPOLOGY = 'v4-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 MAX_LENGTH = args.length
@@ -138,6 +138,7 @@ model = models.MtfModel(
   model_dir = model_dir,
   tpu = "mtetlarge",
   gcp_project="vietai-research",
+  tpu_zone="us-central2-b",
   tpu_topology = TPU_TOPOLOGY,
   model_parallelism = model_parallelism,
   batch_size = train_batch_size,
