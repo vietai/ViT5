@@ -136,9 +136,7 @@ model_dir = f'gs://{BUCKET}/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}_tags'
 
 model = models.MtfModel(
   model_dir = model_dir,
-  tpu = "mtetlarge",
-  gcp_project="vietai-research",
-  tpu_zone="us-central2-b",
+  tpu = TPU_ADDRESS,
   tpu_topology = TPU_TOPOLOGY,
   model_parallelism = model_parallelism,
   batch_size = train_batch_size,
