@@ -27,7 +27,7 @@ TPU_TOPOLOGY = 'v3-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 MAX_LENGTH = args.length
-
+BUCKET = "vien-translation"
 ON_CLOUD = True
 
 if ON_CLOUD:
@@ -78,7 +78,8 @@ gin.parse_config_file(
 
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    files_name_cc100 = [f'gs://translationv2/data/cc100_envi_{MAX_LENGTH}_tags/train_envi_{i}.txt' for i in range(0,310)]
+    # files_name_cc100 = [f'gs://translationv2/data/cc100_envi_{MAX_LENGTH}_tags/train_envi_{i}.txt' for i in range(0,310)]
+    files_name_cc100 = [f'gs://{BUCKET}/data/cc100_envi_{MAX_LENGTH}_tags/train_envi_{i}.txt' for i in range(0,310)]
 
     shuffle(files_name_cc100)
 
@@ -94,7 +95,7 @@ def dumping_dataset(split, shuffle_files = False):
 
 MODEL_SIZE = 'large'
 
-vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
+vocab = f"gs://{BUCKET}/models/spm/cc100_envi_vocab.model"
 t5.data.TaskRegistry.remove('dumping_dataset')
 t5.data.TaskRegistry.add(
     'dumping_dataset',
@@ -131,7 +132,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     '11B': (8, 16, 1),
 }[MODEL_SIZE]
 
-model_dir = f'gs://translationv2/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}_tags'
+model_dir = f'gs://{BUCKET}/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}_tags'
 
 model = models.MtfModel(
   model_dir = model_dir,
