@@ -151,8 +151,8 @@ model = models.MtfModel(
   model_dir = model_dir,
   tpu = "mtetlarge",
   gcp_project="vietai-research",
-  tpu_zone="	us-central2-b",
-  
+  tpu_zone="us-central2-b",
+
   tpu_topology = TPU_TOPOLOGY,
   model_parallelism = model_parallelism,
   batch_size = train_batch_size,
