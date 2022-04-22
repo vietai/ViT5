@@ -34,11 +34,15 @@ if ON_CLOUD:
   print("Setting up GCS access...")
   # import tensorflow_gcs_config
   # Set credentials for GCS reading/writing from Colab and TPU.
-  TPU_TOPOLOGY = "v3-8"
+  TPU_TOPOLOGY = "v4-8"
   # auth.authenticate_user()
+  tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='mtetlarge', zone='us-central2-b', project='vietai-research')  # TPU zdetection
+  
+  TPU_ADDRESS = tpu.get_master()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
   # tensorflow_gcs_config.configure_gcs_from_colab_auth()
 
+print('TPU_ADDRESS ', TPU_ADDRESS)
 tf.disable_v2_behavior()
 
 # Improve logging.
