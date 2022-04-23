@@ -80,7 +80,7 @@ def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     ds = tf.data.TextLineDataset(
         [
-        f'gs://vien-translation/data/mtet/train_{task}.tsv',
+        f'gs://vien-translation/data/mtet/train_{task}_filtered.tsv',
         ]
         )
     ds = ds.map(
