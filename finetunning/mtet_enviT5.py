@@ -210,10 +210,10 @@ predictions = []
 references = []
 with open(f'../data/{eval}/{label_file}') as file:
   for line in file:
-    predictions.append(line.strip())
+    references.append(line.strip())
 with open(prediction_files[-1]) as file:
   for line in file:
-    references.append([line.strip()])
+    predictions.append([line.strip()])
 
 metric = load_metric("sacrebleu", keep_in_memory=True)
 result = metric.compute(predictions=predictions, references=references)
