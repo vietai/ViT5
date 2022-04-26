@@ -103,7 +103,7 @@ def translate_preprocessor(ds):
             tf.strings.join(
                 [f"{task[0:2]}: ", normalize_text(ex["input"])]),
         "targets": tf.strings.join(
-                [f"", normalize_text(ex["target"])])
+                [f"{task[2:4]}:", normalize_text(ex["target"])])
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -210,7 +210,7 @@ predictions = []
 references = []
 with open(f'../data/{eval}/{label_file}') as file:
   for line in file:
-    references.append([line.strip()])
+    references.append([f"{task[2:4]}: line.strip()"])
 with open(prediction_files[-1]) as file:
   for line in file:
     predictions.append(line.strip())
