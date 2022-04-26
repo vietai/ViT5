@@ -19,31 +19,31 @@ print(tensorflow.__version__)
 
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
-parser.add_argument('-length', dest='length', type=int, help='sequence length', default=512)
+parser.add_argument('-length', dest='length', type=int, help='sequence length', default=1024)
 args = parser.parse_args()
 
 
-TPU_TOPOLOGY = 'v4-8'
+TPU_TOPOLOGY = 'v3-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 MAX_LENGTH = args.length
-BUCKET = "vien-translation"
+BUCKET = "translationv2"
 ON_CLOUD = True
 
 if ON_CLOUD:
   print("Setting up GCS access...")
   # import tensorflow_gcs_config
   # Set credentials for GCS reading/writing from Colab and TPU.
-  TPU_TOPOLOGY = "v4-8"
+  TPU_TOPOLOGY = "v3-8"
   # auth.authenticate_user()
   tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='mtetlarge', zone='us-central2-b', project='vietai-research')  # TPU zdetection
   
-  TPU_ADDRESS = tpu.get_master()
+  # TPU_ADDRESS = tpu.get_master()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
   # tensorflow_gcs_config.configure_gcs_from_colab_auth()
 
 print('TPU_ADDRESS ', TPU_ADDRESS)
-tf.disable_v2_behavior()
+# tf.disable_v2_behavior()
 
 # Improve logging.
 from contextlib import contextmanager
