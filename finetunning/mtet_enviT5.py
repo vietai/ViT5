@@ -210,7 +210,7 @@ predictions = []
 references = []
 with open(f'../data/{eval}/{label_file}') as file:
   for line in file:
-    references.append([f"{task[2:4]}: line.strip()"])
+    references.append([f"{task[2:4]}: {line.strip()}"])
 with open(prediction_files[-1]) as file:
   for line in file:
     predictions.append(line.strip())
