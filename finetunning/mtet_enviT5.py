@@ -215,6 +215,13 @@ with open(prediction_files[-1]) as file:
   for line in file:
     predictions.append(line.strip())
 
+
+print('DEBUG: few senctences of pred')
+print(predictions[0:3])
+
+print('DEBUG: few senctences of ref')
+print(references[0:3])
+
 metric = load_metric("sacrebleu", keep_in_memory=True)
 result = metric.compute(predictions=predictions, references=references)
 result = {"bleu": result["score"]}
