@@ -103,7 +103,7 @@ def translate_preprocessor(ds):
             tf.strings.join(
                 [f"{task[0:2]}: ", normalize_text(ex["input"])]),
         "targets": tf.strings.join(
-                [f"{task[2:4]}:", normalize_text(ex["target"])])
+                [f"{task[2:4]}: ", normalize_text(ex["target"])])
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
