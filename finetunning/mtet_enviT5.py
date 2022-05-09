@@ -80,7 +80,7 @@ def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     ds = tf.data.TextLineDataset(
         [
-        f'gs://vien-translation/data/mtet/train_{task}_filtered.tsv',
+        f'gs://vien-translation/data/mtet/train_{task}_total.tsv',
         ]
         )
     ds = ds.map(
@@ -140,7 +140,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
 
 PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_1000000/"
 
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1000000enviT5"
+MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1000000enviT5_total"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -159,12 +159,6 @@ model = MtfModel(
 )
 
 FINETUNE_STEPS = args.steps
-
-# model.finetune(
-#     mixture_or_task_name="mtet_all",
-#     pretrained_model_dir=PRETRAINED_DIR,
-#     finetune_steps=FINETUNE_STEPS
-# )
 
 model.finetune(
     mixture_or_task_name="mtet_all",
