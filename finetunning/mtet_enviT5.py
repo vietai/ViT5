@@ -19,7 +19,7 @@ parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0
 parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
 parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
 parser.add_argument('-filtered', dest='filtered', type=str, help='filtered or full', default='total')
-parser.add_argument('-lr', dest='lr', type=int, help='learning rate', default=0.001)
+parser.add_argument('-lr', dest='lr', type=float, help='learning rate', default=0.001)
 
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
@@ -37,7 +37,7 @@ if ON_CLOUD:
   # import tensorflow_gcs_config
   from google.colab import auth
   # Set credentials for GCS reading/writing from Colab and TPU.
-  TPU_TOPOLOGY = "v3-8"
+  TPU_TOPOLOGY = "v2-8"
   # auth.authenticate_user()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
   # tensorflow_gcs_config.configure_gcs_from_colab_auth()
