@@ -1,3 +1,4 @@
+from click import style
 import tensorflow
 import functools
 import warnings
@@ -17,6 +18,8 @@ parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
 parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
+parser.add_argument('-filtered', dest='filtered', type=str, help='filtered or full', default='total')
+parser.add_argument('-lr', dest='lr', type=int, help='learning rate', default=0.001)
 
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
@@ -75,12 +78,15 @@ def tf_verbosity_level(level):
   tf.logging.set_verbosity(og_level)
 
 task = args.task
+filterd = args.filtered
+lr = args.lr
+steps = args.steps
 vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     ds = tf.data.TextLineDataset(
         [
-        f'gs://vien-translation/data/mtet/train_{task}_total.tsv',
+        f'gs://vien-translation/data/mtet/train_{task}_{filterd}.tsv',
         ]
         )
     ds = ds.map(
@@ -140,7 +146,7 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
 
 PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_1000000/"
 
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1000000enviT5_total"
+MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1000000enviT5_{filterd}_lr{lr}"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -152,8 +158,8 @@ model = MtfModel(
     model_parallelism=model_parallelism,
     batch_size=train_batch_size,
     sequence_length={"inputs": 128, "targets": 128},
-    learning_rate_schedule=0.001,
-    save_checkpoints_steps=args.steps,
+    learning_rate_schedule=lr,
+    save_checkpoints_steps=steps,
     keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
     # iterations_per_loop=100,
 )
