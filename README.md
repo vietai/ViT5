@@ -6,7 +6,7 @@ Try our demo on [HF Spaces](https://huggingface.co/spaces/VietAI/ViNewsSum)
 
 ### HuggingFace Model Checkpoint
 - [ViT5-Base-1024 (1M)](https://huggingface.co/VietAI/vit5-base)
-- [ViT5-Large-1024 (1M)](https://huggingface.co/VietAI/vit5-large)
+- [ViT5-Large-1024 (1.5M)](https://huggingface.co/VietAI/vit5-large)
 
 #### Example
 Below, we give an example of how to load ViT5 model from HuggingFace to summarize documents:
