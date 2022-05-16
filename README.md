@@ -46,7 +46,13 @@ For easily reproducing our results, we provide the ViT5 checkpoint finetuned on 
 
 ## Citation
 ```
-Coming soon
+@misc{https://doi.org/10.48550/arxiv.2205.06457,
+  doi = {10.48550/ARXIV.2205.06457},
+  author = {Phan, Long and Tran, Hieu and Nguyen, Hieu and Trinh, Trieu H.},
+  title = {ViT5: Pretrained Text-to-Text Transformer for Vietnamese Language Generation},
+  publisher = {arXiv},
+  year = {2022},
+}
 ```
 
 <!-- ACKNOWLEDGEMENTS -->
