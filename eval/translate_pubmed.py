@@ -73,6 +73,9 @@ input_files = os.listdir('en')
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
+    import time
+    start_time = time.time()
+    print('Starting ', input_file)
     predict_inputs_path = f'en/{input_file}'
     predict_outputs_path = f"vi/{input_file.replace('en', 'vi')}"
     with tf_verbosity_level('ERROR'):
@@ -85,3 +88,6 @@ for input_file in input_files:
             checkpoint_steps=-1,
             temperature=0,
         )
+    print('End ', input_file, )
+    print("--- %s seconds ---" % (time.time() - start_time))
+
