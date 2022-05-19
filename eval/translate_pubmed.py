@@ -76,7 +76,7 @@ for input_file in input_files:
     predict_inputs_path = f'en/{input_file}'
     predict_outputs_path = f"vi/{input_file.replace('en', 'vi')}"
     with tf_verbosity_level('ERROR'):
-        model.batch_size = 1  # Min size for small model on v2-8 with parallelism 1.
+        model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
         model.predict(
             input_file=predict_inputs_path,
             output_file=predict_outputs_path,
