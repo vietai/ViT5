@@ -69,7 +69,7 @@ model = MtfModel(
 # Manually apply preprocessing by prepending "triviaqa question:".
 vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
 
-input_files = os.listidr('en')
+input_files = os.listdir('en')
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
