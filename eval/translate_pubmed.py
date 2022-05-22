@@ -66,10 +66,25 @@ model = MtfModel(
     # iterations_per_loop=100,
 )
 
+import re
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+
 # Manually apply preprocessing by prepending "triviaqa question:".
 vocab = f"gs://translationv2/models/spm/cc100_envi_vocab.model"
 
 input_files = os.listdir('en')
+input_files.sort(key=natural_keys)
+input_files = input_files[::-1]
+
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
