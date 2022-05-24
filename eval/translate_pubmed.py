@@ -87,15 +87,20 @@ input_files = os.listdir('en')
 input_files.sort(key=natural_keys)
 input_files = input_files[::-1]
 
+existed_file = list(map(lambda x: x.split('-')[0], os.listdir('vi')))
+
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
+    output_file = input_file.replace('en', 'vi')
     import time
     start_time = time.time()
     print('Starting ', input_file)
     predict_inputs_path = f'en/{input_file}'
-    predict_outputs_path = f"vi/{input_file.replace('en', 'vi')}"
-    if os.path.isfile(predict_outputs_path):
+    predict_outputs_path = f"vi/{output_file}"
+
+    
+    if output_file in existed_file:
         print('skipping file ', predict_outputs_path)
         continue
     with tf_verbosity_level('ERROR'):
