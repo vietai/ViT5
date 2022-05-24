@@ -96,6 +96,7 @@ for input_file in input_files:
     predict_inputs_path = f'en/{input_file}'
     predict_outputs_path = f"vi/{input_file.replace('en', 'vi')}"
     if os.path.isfile(predict_outputs_path):
+        print('skipping file ', predict_outputs_path)
         continue
     with tf_verbosity_level('ERROR'):
         model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
