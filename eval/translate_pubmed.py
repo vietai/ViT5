@@ -67,6 +67,8 @@ model = MtfModel(
 )
 
 import re
+import os.path
+
 def atoi(text):
     return int(text) if text.isdigit() else text
 
@@ -93,6 +95,8 @@ for input_file in input_files:
     print('Starting ', input_file)
     predict_inputs_path = f'en/{input_file}'
     predict_outputs_path = f"vi/{input_file.replace('en', 'vi')}"
+    if os.path.isfile(predict_outputs_path):
+        continue
     with tf_verbosity_level('ERROR'):
         model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
         model.predict(
