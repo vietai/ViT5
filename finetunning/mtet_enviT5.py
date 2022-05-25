@@ -141,9 +141,9 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "11B": (8, 16, 1)}[MODEL_SIZE]
 
 
-# PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_1000000/"
-PRETRAINED_DIR = 'gs://translationv2/models/enviT5_1024_base_tags/'
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1000000enviT5_{filterd}_lr{lr}"
+PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_1500000/"
+# PRETRAINED_DIR = 'gs://translationv2/models/enviT5_1024_base_tags/'
+MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1500000enviT5_{filterd}_lr{lr}"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
