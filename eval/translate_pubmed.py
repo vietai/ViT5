@@ -90,8 +90,8 @@ input_files = input_files[::-1]
 
 existed_file = list(map(lambda x: x.split('-')[0], os.listdir('vi')))
 offset = args.offset
-start = 100*offset
-input_files = input_files[start:start+100]
+start = 50*offset
+input_files = input_files[start:start+50]
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
