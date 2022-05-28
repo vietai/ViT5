@@ -17,6 +17,7 @@ print(tensorflow.__version__)
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-model', dest='model', type=str, help='model dir', default='.')
+parser.add_argument('-offset', dest='offset', type=int, help='Offset', default=0)
 
 args = parser.parse_args()
 
@@ -88,7 +89,9 @@ input_files.sort(key=natural_keys)
 input_files = input_files[::-1]
 
 existed_file = list(map(lambda x: x.split('-')[0], os.listdir('vi')))
-
+offset = args.offset
+start = 100*offset
+input_files = input_files[start:start+100]
 
 for input_file in input_files:
     # Ignore any logging so that we only see the model's answers to the questions.
