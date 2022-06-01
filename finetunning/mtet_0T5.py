@@ -152,7 +152,7 @@ model = MtfModel(
     batch_size=train_batch_size,
     sequence_length={"inputs": 128, "targets": 128},
     learning_rate_schedule=0.005,
-    save_checkpoints_steps=2000,
+    save_checkpoints_steps=500,
     keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
     # iterations_per_loop=100,
 )
