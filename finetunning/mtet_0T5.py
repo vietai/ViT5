@@ -202,6 +202,8 @@ for checkpoint in checkpoints:
         temperature=0,
     )
 
+
+
   # The output filename will have the checkpoint appended so we glob to get 
   # the latest.
   prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
@@ -223,8 +225,10 @@ for checkpoint in checkpoints:
   metric = load_metric("sacrebleu", keep_in_memory=True)
   result = metric.compute(predictions=predictions, references=references)
   result = {"bleu": result["score"]}
-  results.append([checkpoint, result])
+  results.append([int(checkpoint), result])
 
+
+sorted(results, key=lambda l:l[0])
 print(results)
 with open('result.tsv', 'w') as file:
   for result in results:
