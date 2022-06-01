@@ -185,39 +185,47 @@ predict_inputs_path = 'predict_input.txt'
 predict_outputs_path = output_file
 # Manually apply preprocessing by prepending "triviaqa question:".
 
-# Ignore any logging so that we only see the model's answers to the questions.
-with tf_verbosity_level('ERROR'):
-  model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
-  model.predict(
-      input_file=predict_inputs_path,
-      output_file=predict_outputs_path,
-      # Select the most probable output token at each step.
-      vocabulary=t5.data.SentencePieceVocabulary(vocab),
-      checkpoint_steps=-1,
-      temperature=0,
-  )
 
-# The output filename will have the checkpoint appended so we glob to get 
-# the latest.
-prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
+checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
+results = []
+for checkpoint in checkpoints:
+  print('starting checkpoint', checkpoint)
+  # Ignore any logging so that we only see the model's answers to the questions.
+  with tf_verbosity_level('ERROR'):
+    model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
+    model.predict(
+        input_file=predict_inputs_path,
+        output_file=predict_outputs_path,
+        # Select the most probable output token at each step.
+        vocabulary=t5.data.SentencePieceVocabulary(vocab),
+        checkpoint_steps=checkpoint,
+        temperature=0,
+    )
 
-predictions = []
-references = []
-with open(f'../data/{eval}/{label_file}') as file:
-  for line in file:
-    references.append([f"{task[2:4]}: {line.strip()}"])
-with open(prediction_files[-1]) as file:
-  for line in file:
-    predictions.append(line.strip())
+  # The output filename will have the checkpoint appended so we glob to get 
+  # the latest.
+  prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
 
+  predictions = []
+  references = []
+  with open(f'../data/{eval}/{label_file}') as file:
+    for line in file:
+      references.append([f"{task[2:4]}: {line.strip()}"])
+  with open(f'{output_file}-{checkpoint}') as file:
+    for line in file:
+      predictions.append(line.strip())
 
-print('DEBUG: few senctences of pred')
-print(predictions[0:3])
+  # print('DEBUG: few senctences of pred')
+  # print(predictions[0:3])
 
-print('DEBUG: few senctences of ref')
-print(references[0:3])
+  # print('DEBUG: few senctences of ref')
+  # print(references[0:3])
+  metric = load_metric("sacrebleu", keep_in_memory=True)
+  result = metric.compute(predictions=predictions, references=references)
+  result = {"bleu": result["score"]}
+  results.append([checkpoint, result])
 
-metric = load_metric("sacrebleu", keep_in_memory=True)
-result = metric.compute(predictions=predictions, references=references)
-result = {"bleu": result["score"]}
-print(result)
+print(results)
+with open('result.tsv', 'w') as file:
+  for result in results:
+    file.write(f'{result[0]}\t{result[1]}\n')
