@@ -102,7 +102,8 @@ def translate_preprocessor(ds):
         "inputs":
             tf.strings.join(
                 [f"{task}: ", normalize_text(ex["input"])]),
-        "targets": normalize_text(ex["target"])
+        "targets": tf.strings.join(
+                [f"{task[2:4]}: ", normalize_text(ex["target"])])
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -154,7 +155,7 @@ model = MtfModel(
     learning_rate_schedule=0.005,
     save_checkpoints_steps=500,
     keep_checkpoint_max=500,
-    # iterations_per_loop=100,
+    iterations_per_loop=0,
 )
 
 FINETUNE_STEPS = args.steps
