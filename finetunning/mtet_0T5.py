@@ -154,7 +154,7 @@ model = MtfModel(
     sequence_length={"inputs": 128, "targets": 128},
     learning_rate_schedule=0.005,
     save_checkpoints_steps=100,
-    keep_checkpoint_max=50,
+    keep_checkpoint_max=200,
     iterations_per_loop=100,
 )
 
