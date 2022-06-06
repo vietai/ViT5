@@ -142,7 +142,7 @@ PRETRAINED_DIR = 'gs://translationv2/models/enviT5_1024_base_tags'
 checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(PRETRAINED_DIR +'/*ckpt*.index')]
 checkpoints.sort()
 
-NUM_WORKER = 3
+NUM_WORKER = 8
 CHUNK_LENGTH = int(len(checkpoints) / NUM_WORKER)
 checkpoints = [checkpoints[i:i + CHUNK_LENGTH] for i in range(0, len(checkpoints), CHUNK_LENGTH)]
 CHUNK = args.chunk
