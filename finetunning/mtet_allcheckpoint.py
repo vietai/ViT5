@@ -33,7 +33,6 @@ ON_CLOUD = True
 if ON_CLOUD:
   print("Setting up GCS access...")
   # import tensorflow_gcs_config
-  from google.colab import auth
   # Set credentials for GCS reading/writing from Colab and TPU.
   TPU_TOPOLOGY = "v3-8"
   # auth.authenticate_user()
