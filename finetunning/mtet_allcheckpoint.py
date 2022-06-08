@@ -201,6 +201,12 @@ for checkpoint in checkpoints[CHUNK]:
 
     print(f'==================EVAL Checkpoint {checkpoint}==================')
 
+    finetuned_checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
+    finetuned_checkpoints.sort()
+    finetuned_checkpoint = finetuned_checkpoints[-1]
+
+    if os.path.isfile(f'{output_file}-{finetuned_checkpoint}'):
+        continue
     with tf_verbosity_level('ERROR'):
         model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
         model.predict(
@@ -212,9 +218,7 @@ for checkpoint in checkpoints[CHUNK]:
             temperature=0,
         )
 
-    finetuned_checkpoints = [int(x.replace('.index', '').split('-')[-1]) for x in tf.io.gfile.glob(MODEL_DIR +'/*ckpt*.index')]
-    finetuned_checkpoints.sort()
-    finetuned_checkpoint = finetuned_checkpoints[-1]
+
 
     predictions = []
     references = []
