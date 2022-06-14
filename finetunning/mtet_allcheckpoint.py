@@ -83,7 +83,7 @@ def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     datasets = [f'gs://vien-translation/data/mtet/train_{task}_filtered.tsv']
     if train_set == 'tst':
-        print('Training using TST2013 datasets')
+        print('===========================Training using TST2013 datasets===========================')
         datasets = [f'gs://vien-translation/data/tst2013/train_{task}.tsv']
 
 
