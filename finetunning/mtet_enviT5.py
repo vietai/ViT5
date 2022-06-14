@@ -20,7 +20,9 @@ parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi t
 parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
 parser.add_argument('-filtered', dest='filtered', type=str, help='filtered or full', default='total')
 parser.add_argument('-lr', dest='lr', type=float, help='learning rate', default=0.001)
-
+parser.add_argument('-pubmed', dest='pubmed', type=float, help='learning rate', default=0.001)
+parser.add_argument('--pubmed', dest='pubmed', action='store_false', default=False)
+parser.add_argument('-pretrained_steps', dest='pretrained_steps', type=int, help='Pretrained steps for checkpoint', default=1000000)
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
 
@@ -78,14 +80,17 @@ task = args.task
 filterd = args.filtered
 lr = args.lr
 steps = args.steps
+pubmed = args.pubmed
+
+print('=======DATA Week Supervised with Pubmed==================')
 vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    ds = tf.data.TextLineDataset(
-        [
-        f'gs://vien-translation/data/mtet/train_{task}_{filterd}.tsv',
-        ]
-        )
+    datasets = [f'gs://vien-translation/data/mtet/train_{task}_{filterd}.tsv',]
+    if pubmed:
+      datasets.append(f'gs://vien-translation/data/pubmed_80/train_pubmed_80_{task}.tsv')
+
+    ds = tf.data.TextLineDataset(datasets)
     ds = ds.map(
         functools.partial(tf.io.decode_csv, record_defaults=["", ""],
                           field_delim="\t", use_quote_delim=False),
@@ -141,10 +146,14 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "11B": (8, 16, 1)}[MODEL_SIZE]
 
 
-PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_1500000/"
+pretrained_steps = args.pretrained_steps
+PRETRAINED_DIR = f"gs://vien-translation/checkpoints/enviT5_base_{pretrained_steps}/"
 # PRETRAINED_DIR = 'gs://translationv2/models/enviT5_1024_base_tags/'
-MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_1500000enviT5_{filterd}_lr{lr}"
 
+if pubmed:
+  MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_{pretrained_steps}enviT5_{filterd}_lr{lr}_pubmed"
+else:
+  MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune/mtet_{task}_{pretrained_steps}enviT5_{filterd}_lr{lr}"
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
 
