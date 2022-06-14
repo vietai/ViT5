@@ -17,9 +17,11 @@ parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi to En(vien) task', default='envi')
 parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
+
+parser.add_argument('-train', dest='train_set', type=str, help='Train set', default='tst')
 parser.add_argument('-chunk', dest='chunk', type=int, help='Chunk', default=0)
 
-parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=397)
+parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=395)
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v2-8'
@@ -75,14 +77,17 @@ def tf_verbosity_level(level):
   tf.logging.set_verbosity(og_level)
 
 task = args.task
+train_set = args.train_set
 vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
-    ds = tf.data.TextLineDataset(
-        [
-        f'gs://vien-translation/data/mtet/train_{task}_filtered.tsv',
-        ]
-        )
+    datasets = [f'gs://vien-translation/data/mtet/train_{task}_filtered.tsv']
+    if train_set == 'tst':
+        print('Training using TST2013 datasets')
+        datasets = [f'gs://vien-translation/data/tst2013/train_{task}.tsv']
+
+
+    ds = tf.data.TextLineDataset(datasets)
     ds = ds.map(
         functools.partial(tf.io.decode_csv, record_defaults=["", ""],
                           field_delim="\t", use_quote_delim=False),
@@ -153,7 +158,7 @@ print('==============CHECKPOINTS=================================')
 print(checkpoints[CHUNK])
 
 for checkpoint in checkpoints[CHUNK]:
-    MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune_allcheckpoint/mtet_{task}_enviT5_1000000_{checkpoint}"
+    MODEL_DIR = f"gs://vien-translation/checkpoints/enviT5_finetune_allcheckpoint_trainset={train_set}/mtet_{task}_enviT5_1000000_{checkpoint}"
 
     tf.io.gfile.makedirs(MODEL_DIR)
 
@@ -238,7 +243,7 @@ for checkpoint in checkpoints[CHUNK]:
     result = metric.compute(predictions=predictions, references=references)
     result = {"bleu": result["score"]}
 
-    with open(f'results.tsv', 'a') as file:
+    with open(f'results_{CHUNK}.tsv', 'a') as file:
         file.write(f'{checkpoint}\t{finetuned_checkpoint}\t{result}\n')
     # results.append([int(checkpoint), result])
 
