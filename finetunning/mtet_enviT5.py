@@ -20,7 +20,7 @@ parser.add_argument('-task', dest='task', type=str, help='En to Vi(envi) or Vi t
 parser.add_argument('-eval', dest='eval', type=str, help='Eval test set', default='tst')
 parser.add_argument('-filtered', dest='filtered', type=str, help='filtered or full', default='total')
 parser.add_argument('-lr', dest='lr', type=float, help='learning rate', default=0.001)
-parser.add_argument('-pubmed', dest='pubmed', action='store_false', default=False)
+parser.add_argument('-pubmed', dest='pubmed', action='store_true', default=False)
 parser.add_argument('-pretrained_steps', dest='pretrained_steps', type=int, help='Pretrained steps for checkpoint', default=1000000)
 parser.add_argument('-steps', dest='steps', type=int, help='tpu address', default=16266)
 args = parser.parse_args()
