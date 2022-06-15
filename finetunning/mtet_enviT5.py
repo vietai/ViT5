@@ -82,13 +82,13 @@ lr = args.lr
 steps = args.steps
 pubmed = args.pubmed
 
-print('=======DATA Week Supervised with Pubmed==================')
 vocab = f"gs://vien-translation/checkpoints/spm/cc100_envi_vocab.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     datasets = [f'gs://vien-translation/data/mtet/train_{task}_{filterd}.tsv',]
     if pubmed:
-      datasets.append(f'gs://vien-translation/data/pubmed_80/train_pubmed_80_{task}.tsv')
+      print('=======DATA Week Supervised with Pubmed==================')
+      datasets = [f'gs://vien-translation/data/mtet/train_{task}_{filterd}_pubmed.tsv']
 
     ds = tf.data.TextLineDataset(datasets)
     ds = ds.map(
