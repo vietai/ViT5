@@ -17,7 +17,9 @@ print(tensorflow.__version__)
 
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
-parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=0)
+parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=45000)
+parser.add_argument('-model_size', dest='model_size', type=str, help='Model Size', default='base')
+
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v3-8'
@@ -79,7 +81,6 @@ def dumping_dataset(split, shuffle_files = False):
       ds = tf.data.TextLineDataset(
             [
             'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
-            # 'gs://t5_training/t5-data/vi_data/PhoNER/pho_ner_dev.tsv',
             ]
           )
     else:
@@ -129,16 +130,23 @@ t5.data.MixtureRegistry.add(
 )
 
 
-MODEL_SIZE = "large"
+MODEL_SIZE = args.model_size
 
 # Set parallelism and batch size to fit on v3-8 TPU (if possible).
 model_parallelism, train_batch_size, keep_checkpoint_max = {
     "small": (1, 256, 16),
-    "base": (8, 128, 8),
+    "base": (4, 256, 8),
     "large": (8, 256, 4),
     "3B": (8, 16, 1),
     "11B": (8, 16, 1)}[MODEL_SIZE]
-PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
+
+
+# set to True to use public checkpoint, else for internal vietAI
+vietai_public_checkpoint = False
+if vietai_public_checkpoint:
+  PRETRAINED_DIR = f"gs://vietai_public/viT5/viT5_1024_{MODEL_SIZE}/"
+else:
+  PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
 
 MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
 
@@ -152,10 +160,10 @@ model = MtfModel(
     model_parallelism=model_parallelism,
     batch_size=train_batch_size,
     sequence_length={"inputs": 512, "targets": 512},
-    learning_rate_schedule=0.001,
-    save_checkpoints_steps=500,
-    keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
+    learning_rate_schedule=0.0005,
     iterations_per_loop=100,
+    save_checkpoints_steps=2000,
+    keep_checkpoint_max=200,
 )
 
 FINETUNE_STEPS = args.steps
