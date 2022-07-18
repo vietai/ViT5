@@ -26,6 +26,9 @@ TPU_TOPOLOGY = 'v3-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
+MODEL_SIZE = args.model_size
+
+
 print(f"TPU Address {TPU_ADDRESS}")
 print(f"FINE TUNE STEPS {args.steps}")
 ON_CLOUD = True
@@ -73,14 +76,24 @@ def tf_verbosity_level(level):
   yield
   tf.logging.set_verbosity(og_level)
 
+
+# set to True to use public checkpoint, else for internal vietAI
+vietai_public_checkpoint = False
+if vietai_public_checkpoint:
+  BASE_DIR = "gs://vietai_public/viT5"
+else:
+  BASE_DIR = 'gs://translationv2/models'
+
+
+
 task = 'phoner'
-vocab = f"gs://translationv2/models/viT5_1024_large/wiki_vietnamese_vocab.model"
+vocab = f"{BASE_DIR}/viT5_{MODEL_SIZE}_1024/spiece.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     if split == 'train':
       ds = tf.data.TextLineDataset(
             [
-            'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
+            f'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
             ]
           )
     else:
@@ -130,7 +143,6 @@ t5.data.MixtureRegistry.add(
 )
 
 
-MODEL_SIZE = args.model_size
 
 # Set parallelism and batch size to fit on v3-8 TPU (if possible).
 model_parallelism, train_batch_size, keep_checkpoint_max = {
@@ -141,14 +153,13 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
     "11B": (8, 16, 1)}[MODEL_SIZE]
 
 
-# set to True to use public checkpoint, else for internal vietAI
-vietai_public_checkpoint = False
-if vietai_public_checkpoint:
-  PRETRAINED_DIR = f"gs://vietai_public/viT5/viT5_{MODEL_SIZE}_1024/"
-else:
-  PRETRAINED_DIR = f"gs://translationv2/models/viT5_{MODEL_SIZE}_1024/"
 
-MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
+
+PRETRAINED_DIR = f"{BASE_DIR}/viT5_{MODEL_SIZE}_1024/"
+
+
+# change to your own MODEL_DIR 
+MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_{MODEL_SIZE}_1024"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
