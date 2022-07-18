@@ -216,9 +216,7 @@ for checkpoint in checkpoints:
 
     predict_inputs_path = 'predict_input.txt'
     predict_outputs_path = output_file
-    # Manually apply preprocessing by prepending "triviaqa question:".
 
-    # Ignore any logging so that we only see the model's answers to the questions.
     with tf_verbosity_level('ERROR'):
       model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
       model.predict(
@@ -235,9 +233,3 @@ for checkpoint in checkpoints:
     prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
     print("Predicted task : " + task)
     print("\nPredictions using checkpoint %s:\n" % checkpoint)
-    # with tf.io.gfile.GFile(prediction_files[-1]) as f:
-    #   for q, a in zip(questions, f):
-    #     if q:
-    #       print("Q: " + q)
-    #       print("A: " + a)
-    #       print()
