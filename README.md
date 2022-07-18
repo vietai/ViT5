@@ -1,4 +1,7 @@
 # ViT5
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/vit5-pretrained-text-to-text-transformer-for/abstractive-text-summarization-on-vietnews)](https://paperswithcode.com/sota/abstractive-text-summarization-on-vietnews?p=vit5-pretrained-text-to-text-transformer-for)
+
+
 A pretrained Transformer-based encoder-decoder model for the Vietnamese language. With [T5](https://github.com/google-research/text-to-text-transfer-transformer)-style self-supervised pretraining, ViT5 is trained on a large corpus of high-quality and diverse Vietnamese texts. We benchmark ViT5 on two downstream text generation tasks, Abstractive Text Summarization and Named Entity Recognition. All the experiments are shown in our paper [ViT5: Pretrained Text-to-Text Transformer for Vietnamese Language Generation](https://arxiv.org/abs/2205.06457)
 
 ### News Summarization Demo
@@ -48,12 +51,14 @@ For easily reproducing our results, we provide the ViT5 checkpoint finetuned on 
 
 ## Citation
 ```
-@misc{https://doi.org/10.48550/arxiv.2205.06457,
-  doi = {10.48550/ARXIV.2205.06457},
-  author = {Phan, Long and Tran, Hieu and Nguyen, Hieu and Trinh, Trieu H.},
-  title = {ViT5: Pretrained Text-to-Text Transformer for Vietnamese Language Generation},
-  publisher = {arXiv},
-  year = {2022},
+@inproceedings{phan-etal-2022-vit5,
+    title = "{V}i{T}5: Pretrained Text-to-Text Transformer for {V}ietnamese Language Generation",
+    author = "Phan, Long and Tran, Hieu and Nguyen, Hieu and Trinh, Trieu H.",
+    booktitle = "Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies: Student Research Workshop",
+    year = "2022",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.naacl-srw.18",
+    pages = "136--142",
 }
 ```
 
