@@ -144,9 +144,9 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
 # set to True to use public checkpoint, else for internal vietAI
 vietai_public_checkpoint = False
 if vietai_public_checkpoint:
-  PRETRAINED_DIR = f"gs://vietai_public/viT5/viT5_1024_{MODEL_SIZE}/"
+  PRETRAINED_DIR = f"gs://vietai_public/viT5/viT5_{MODEL_SIZE}_1024/"
 else:
-  PRETRAINED_DIR = f"gs://translationv2/models/viT5_1024_{MODEL_SIZE}/"
+  PRETRAINED_DIR = f"gs://translationv2/models/viT5_{MODEL_SIZE}_1024/"
 
 MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_large_1024"
 
