@@ -149,7 +149,7 @@ PRETRAINED_DIR = f"{BASE_DIR}/viT5_{MODEL_SIZE}_1024/"
 
 
 # change to your own MODEL_DIR 
-MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_{MODEL_SIZE}_1024"
+MODEL_DIR = f"gs://translationv2/models/viT5_finetune/PhoNER_viT5_{MODEL_SIZE}_text2text"
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
