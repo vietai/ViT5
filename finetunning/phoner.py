@@ -76,14 +76,14 @@ else:
 
 
 
-task = 'phoner'
+task = 'ner'
 vocab = f"{BASE_DIR}/viT5_{MODEL_SIZE}_1024/spiece.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     if split == 'train':
       ds = tf.data.TextLineDataset(
             [
-            f'gs://translationv2/data/PhoNER/pho_ner_train.tsv',
+            f'gs://translationv2/data/PhoNER/train_text2text.tsv',
             ]
           )
     else:
@@ -189,29 +189,17 @@ print(checkpoints)
 for checkpoint in checkpoints:
   for t in tasks:
     dir = t[0]
-    task = t[1]
-
     
-    input_file = task + '_test_input.txt'
+    input_file = 'predict_input.txt'
     output_file = 'predict_output.txt'
 
-    # Write out the supplied questions to text files.
     os.system(f"gsutil cp {os.path.join('gs://translationv2/data', dir, input_file)} .") 
-
-    with open('predict_input.txt', 'w') as out:
-      for line in open(input_file):
-        line = line.replace('pho_ner', 'phoner')
-        out.write(line)
         
-
-    predict_inputs_path = 'predict_input.txt'
-    predict_outputs_path = output_file
-
     with tf_verbosity_level('ERROR'):
       model.batch_size = 8  # Min size for small model on v2-8 with parallelism 1.
       model.predict(
-          input_file=predict_inputs_path,
-          output_file=predict_outputs_path,
+          input_file=input_file,
+          output_file=output_file,
           # Select the most probable output token at each step.
           vocabulary=t5.data.SentencePieceVocabulary(vocab),
           checkpoint_steps=checkpoint,
@@ -220,6 +208,6 @@ for checkpoint in checkpoints:
 
     # The output filename will have the checkpoint appended so we glob to get 
     # the latest.
-    prediction_files = sorted(tf.io.gfile.glob(predict_outputs_path + "*"))
+    prediction_files = sorted(tf.io.gfile.glob(output_file + "*"))
     print("Predicted task : " + task)
     print("\nPredictions using checkpoint %s:\n" % checkpoint)
