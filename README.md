@@ -22,7 +22,7 @@ tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-base")
 model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-base")
 
 sentence = "Xin chào"
-text =  "summarize: " + sentence + " </s>"
+text =  "vi: " + sentence
 encoding = tokenizer.encode_plus(text, pad_to_max_length=True, return_tensors="pt")
 input_ids, attention_masks = encoding["input_ids"].to("cuda"), encoding["attention_mask"].to("cuda")
 outputs = model.generate(
