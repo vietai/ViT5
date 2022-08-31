@@ -1,4 +1,3 @@
-from tabnanny import check
 import tensorflow
 import functools
 import warnings
@@ -6,38 +5,32 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import argparse
 import tensorflow.compat.v1 as tf
 import t5
-import gin
-from random import shuffle
 from t5.models import MtfModel
-import tensorflow_datasets as tfds
+import os
 from datasets import load_metric
 
 print(tensorflow.__version__)
 
 
-parser = argparse.ArgumentParser(description='Finetunning ViT5')
+parser = argparse.ArgumentParser(description='Finetunning')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=100000)
+parser.add_argument('-model_size', dest='model_size', type=str, help='Model Size', default='base')
 parser.add_argument('-pretraining_path', dest='pretraining_path', type=str, help='Pretraining Path', required=True)
 parser.add_argument('-output_path', dest='output_path', type=str, help='Output Path', required=True)
+
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v2-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
+MODEL_SIZE = args.model_size
+
+
 print(f"TPU Address {TPU_ADDRESS}")
 print(f"FINE TUNE STEPS {args.steps}")
 ON_CLOUD = True
-
-if ON_CLOUD:
-  print("Setting up GCS access...")
-  # import tensorflow_gcs_config
-  # Set credentials for GCS reading/writing from Colab and TPU.
-  TPU_TOPOLOGY = "v2-8"
-  # auth.authenticate_user()
-  tf.config.experimental_connect_to_host(TPU_ADDRESS)
-  # tensorflow_gcs_config.configure_gcs_from_colab_auth()
 
 tf.disable_v2_behavior()
 
@@ -45,6 +38,9 @@ tf.disable_v2_behavior()
 from contextlib import contextmanager
 import logging as py_logging
 
+if ON_CLOUD:
+  tf.get_logger().propagate = False
+  py_logging.root.setLevel('INFO')
 
 @contextmanager
 def tf_verbosity_level(level):
@@ -53,14 +49,25 @@ def tf_verbosity_level(level):
   yield
   tf.logging.set_verbosity(og_level)
 
-task = 'vietnews'
-vocab = f"gs://vien-translation/checkpoints/viT5_large_1024/wiki_vietnamese_vocab.model"
+
+
+tf.disable_v2_behavior()
+# set to True to use public checkpoint, else for internal vietAI
+vietai_public_checkpoint = False
+if vietai_public_checkpoint:
+  BASE_DIR = "gs://vietai_public/viT5"
+else:
+  BASE_DIR = 'gs://translationv2/models'
+
+
+task = "sum"
+vocab = f"gs://vietai_public/viT5/viT5_base_1024/spiece.model"
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
     if split == 'train':
       ds = tf.data.TextLineDataset(
             [
-            'gs://vien-translation/data/vietnews/train_dedup.tsv',
+            f'gs://vietai_public/viT5/data/vietnews/train_vi.tsv',
             ]
           )
     else:
@@ -72,33 +79,30 @@ def dumping_dataset(split, shuffle_files = False):
         functools.partial(tf.io.decode_csv, record_defaults=["", ""],
                           field_delim="\t", use_quote_delim=False),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    ds = ds.shuffle(buffer_size=10000)
     ds = ds.map(lambda *ex: dict(zip(["input", "target"], ex)))
     return ds
 
-def ner_preprocessor(ds):
-  def normalize_text(text):
-    """Lowercase and remove quotes from a TensorFlow string."""
-    return text
+def faq_preprocessor(ds):
 
   def to_inputs_and_targets(ex):
     """Map {"inputs": ..., "targets": ...}->{"inputs": ner..., "targets": ...}."""
     return {
         "inputs":
             tf.strings.join(
-                [normalize_text(ex["input"])]),
-        "targets": normalize_text(ex["target"])
+                [ex["input"]]),
+        "targets": ex["target"]
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
-print("A few raw validation examples...")
-for ex in tfds.as_numpy(dumping_dataset("train").take(5)):
-  print(ex['input'].decode("utf-8"), ex['target'].decode("utf-8"))
+
+
 t5.data.TaskRegistry.remove(task)
 t5.data.TaskRegistry.add(
     task,
     dataset_fn=dumping_dataset,
     splits=["train", "validation"],
-    text_preprocessor=[ner_preprocessor],
+    text_preprocessor=[faq_preprocessor],
     metric_fns=[],
     output_features=t5.data.Feature(vocabulary=t5.data.SentencePieceVocabulary(vocab))
 )
@@ -110,28 +114,22 @@ t5.data.MixtureRegistry.add(
      default_rate=1.0,
 )
 
-# MODEL_NAME = "wiki_and_news_base"
-length = 1024
-MODEL_SIZE = "large"
+# Set parallelism and batch size to fit on v3-8 TPU (if possible).
+model_parallelism, train_batch_size, keep_checkpoint_max = {
+    "small": (1, 256, 16),
+    "base": (4, 256, 8),
+    "large": (8, 256, 4),
+    "3B": (8, 16, 1),
+    "11B": (8, 16, 1)}[MODEL_SIZE]
+
 PRETRAINED_DIR = args.pretraining_path
 
 
 # change to your own MODEL_DIR 
 MODEL_DIR = args.output_path
-
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
 
-# Set parallelism and batch size to fit on v2-8 TPU (if possible).
-# Limit number of checkpoints to fit within 5GB (if possible).
-model_parallelism, train_batch_size, keep_checkpoint_max = {
-    "small": (1, 256, 16),
-    "base": (4, 128, 8),
-    "large": (8, 128, 4),
-    "3B": (8, 16, 1),
-    "11B": (8, 16, 1)}[MODEL_SIZE]
-
-# The models from paper are based on the Mesh Tensorflow Transformer.
 model = MtfModel(
     model_dir=MODEL_DIR,
     tpu=TPU_ADDRESS,
@@ -140,10 +138,11 @@ model = MtfModel(
     batch_size=train_batch_size,
     sequence_length={"inputs": 1024, "targets": 256},
     learning_rate_schedule=0.001,
-    save_checkpoints_steps=50000,
-    keep_checkpoint_max=keep_checkpoint_max if ON_CLOUD else None,
     iterations_per_loop=100,
+    save_checkpoints_steps=20000,
+    keep_checkpoint_max=10,
 )
+
 FINETUNE_STEPS = args.steps
 
 model.finetune(
