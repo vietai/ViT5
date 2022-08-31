@@ -5,8 +5,6 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 import argparse
 import tensorflow.compat.v1 as tf
-import gin
-from t5 import models
 import t5
 import gin
 from random import shuffle
@@ -20,6 +18,8 @@ print(tensorflow.__version__)
 parser = argparse.ArgumentParser(description='Finetunning ViT5')
 parser.add_argument('-tpu', dest='tpu', type=str, help='tpu address', default='0.0.0.0')
 parser.add_argument('-steps', dest='steps', type=int, help='finetune steps', default=100000)
+parser.add_argument('-pretraining_path', dest='pretraining_path', type=str, help='Pretraining Path', required=True)
+parser.add_argument('-output_path', dest='output_path', type=str, help='Output Path', required=True)
 args = parser.parse_args()
 
 TPU_TOPOLOGY = 'v2-8'
@@ -38,25 +38,6 @@ if ON_CLOUD:
   # auth.authenticate_user()
   tf.config.experimental_connect_to_host(TPU_ADDRESS)
   # tensorflow_gcs_config.configure_gcs_from_colab_auth()
-
-tf.disable_v2_behavior()
-
-# Improve logging.
-from contextlib import contextmanager
-import logging as py_logging
-
-if ON_CLOUD:
-  tf.get_logger().propagate = False
-  py_logging.root.setLevel('INFO')
-
-@contextmanager
-def tf_verbosity_level(level):
-  og_level = tf.logging.get_verbosity()
-  tf.logging.set_verbosity(level)
-  yield
-  tf.logging.set_verbosity(og_level)
-
-
 
 tf.disable_v2_behavior()
 
@@ -104,14 +85,13 @@ def ner_preprocessor(ds):
     return {
         "inputs":
             tf.strings.join(
-                [f"{task}: ", normalize_text(ex["input"])]),
+                [normalize_text(ex["input"])]),
         "targets": normalize_text(ex["target"])
     }
   return ds.map(to_inputs_and_targets, 
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 print("A few raw validation examples...")
 for ex in tfds.as_numpy(dumping_dataset("train").take(5)):
-  # print(base64.b64encode(ex['text']))
   print(ex['input'].decode("utf-8"), ex['target'].decode("utf-8"))
 t5.data.TaskRegistry.remove(task)
 t5.data.TaskRegistry.add(
@@ -133,11 +113,11 @@ t5.data.MixtureRegistry.add(
 # MODEL_NAME = "wiki_and_news_base"
 length = 1024
 MODEL_SIZE = "large"
-# PRETRAINED_DIR = f'gs://t5_training/models/vie/viT5_1024/{MODEL_SIZE}'
-# PRETRAINED_DIR = "gs://t5_training/models/vie/viT5_large_1024/"
-PRETRAINED_DIR = "gs://vien-translation/checkpoints/viT5_large_1024"
+PRETRAINED_DIR = args.pretraining_path
 
-MODEL_DIR = f"gs://vien-translation/checkpoints/viT5_finetune/vietnews_viT5_large"
+
+# change to your own MODEL_DIR 
+MODEL_DIR = args.output_path
 
 tf.io.gfile.makedirs(MODEL_DIR)
 # The models from paper are based on the Mesh Tensorflow Transformer.
@@ -171,7 +151,6 @@ model.finetune(
     pretrained_model_dir=PRETRAINED_DIR,
     finetune_steps=FINETUNE_STEPS
 )
-
 
 tasks = [
          ['vietnews', "vietnews"], 
