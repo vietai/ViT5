@@ -155,6 +155,15 @@ tasks = [
          ['vietnews', "vietnews"], 
         ]
 
+
+with open(f'../data/{task}/test.tsv') as file:
+  with open('predict_input.txt', 'w') as file_p:
+    with open('actual_output.txt', 'w') as file_a:
+      for line in file:
+        line = line.strip().split('\t')
+        file_p.write(f'{line[0]}\n')
+        file_a.write(f'{line[0]}\n')
+
 for t in tasks:
   dir = t[0]
   task = t[1]
@@ -166,7 +175,7 @@ for t in tasks:
   # Write out the supplied questions to text files.
       
 
-  predict_inputs_path = f'../data/{task}/{input_file}'
+  predict_inputs_path = input_file
   predict_outputs_path = output_file
   # Manually apply preprocessing by prepending "triviaqa question:".
 
