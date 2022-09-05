@@ -37,7 +37,7 @@ for output in outputs:
     print(line)
 ```
 
-Pretrained Model
+Load our pretrained model on HuggingFace
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -45,18 +45,6 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-base")  
 model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-base")
 model.to("cuda")
-
-text =  f"{sentence}"
-encoding = tokenizer(text, return_tensors="pt")
-input_ids, attention_masks = encoding["input_ids"].to("cuda"), encoding["attention_mask"].to("cuda")
-outputs = model.generate(
-    input_ids=input_ids, attention_mask=attention_masks,
-    max_length=512,
-    early_stopping=True
-)
-for output in outputs:
-    line = tokenizer.decode(output, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-    print(line)
 ```
 
 ## Evaluation
