@@ -37,7 +37,7 @@ for output in outputs:
     print(line)
 ```
 
-Load our pretrained model on HuggingFace
+Load our pretrained models on HuggingFace
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
