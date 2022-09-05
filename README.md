@@ -42,9 +42,13 @@ Load our pretrained model on HuggingFace
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+# Base
 tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-base")  
 model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-base")
-model.to("cuda")
+
+# Large
+tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-large")  
+model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-large")
 ```
 
 ## Evaluation
