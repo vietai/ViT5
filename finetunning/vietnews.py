@@ -201,7 +201,7 @@ rL = []
 
 
 checkpoint = checkpoints[-1]
-score = metric.compute(predictions=open(f'predict_output.txt-{checkpoint}').readlines(), references=open('../data/vietnews/actual_output.txt').readlines())
+score = metric.compute(predictions=open(f'predict_output.txt-{checkpoint}').readlines(), references=open('actual_output.txt').readlines())
 # score = metric.compute()
 
 rL.append([score['rougeL'].mid.fmeasure, score['rougeL'].mid.recall, score['rougeL'].mid.precision, checkpoint])
