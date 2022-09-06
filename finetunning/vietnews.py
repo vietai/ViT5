@@ -156,7 +156,7 @@ tasks = [
         ]
 
 
-with open(f'../data/{task}/test.tsv') as file:
+with open(f'../data/vietnews/test.tsv') as file:
   with open('predict_input.txt', 'w') as file_p:
     with open('actual_output.txt', 'w') as file_a:
       for line in file:
