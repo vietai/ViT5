@@ -7,7 +7,7 @@ A pretrained Transformer-based encoder-decoder model for the Vietnamese language
 ### News Summarization Demo
 Try our demo on [HF Spaces](https://huggingface.co/spaces/VietAI/ViNewsSum)
 
-### HuggingFace Model Checkpoint
+### 🤗 HuggingFace Model Checkpoint
 - [ViT5-Base-1024 (1M)](https://huggingface.co/VietAI/vit5-base)
 - [ViT5-Large-1024 (1.5M)](https://huggingface.co/VietAI/vit5-large)
 
@@ -37,29 +37,28 @@ for output in outputs:
     print(line)
 ```
 
-Pretrained Model
+Load our pretrained models on HuggingFace
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+# Base
 tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-base")  
 model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-base")
-model.to("cuda")
 
-text =  f"{sentence}"
-encoding = tokenizer(text, return_tensors="pt")
-input_ids, attention_masks = encoding["input_ids"].to("cuda"), encoding["attention_mask"].to("cuda")
-outputs = model.generate(
-    input_ids=input_ids, attention_mask=attention_masks,
-    max_length=512,
-    early_stopping=True
-)
-for output in outputs:
-    line = tokenizer.decode(output, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-    print(line)
+# Large
+tokenizer = AutoTokenizer.from_pretrained("VietAI/vit5-large")  
+model = AutoModelForSeq2SeqLM.from_pretrained("VietAI/vit5-large")
 ```
 
 ## Evaluation
+
+- [Eval scripts for Vietnews Summarization with HuggingFace 🤗](https://github.com/vietai/ViT5/blob/main/eval/Eval_vietnews_sum.ipynb)
+
+![image](https://user-images.githubusercontent.com/44376091/187878636-15310ddb-7065-456d-8276-e606df482087.png)
+
+
+
 ### Datasets
 - [Wikilingua](https://github.com/esdurmus/Wikilingua)
 - [Vietnews](https://github.com/ThanhChinhBK/vietnews)
@@ -68,10 +67,8 @@ for output in outputs:
 
 ### Finetuning
 #### Abstractive Text Summarization
-For easily reproducing our results, we provide the ViT5 checkpoint finetuned on vietnews as well. You can directly use our model on [HuggingFace](https://huggingface.co/VietAI/vit5-large-vietnews-summarization).
+For easily reproducing our results, we provide the ViT5 checkpoint finetuned on vietnews as well. You can directly use our model on [HuggingFace](https://huggingface.co/VietAI/vit5-large-vietnews-summarization) 🤗.
 
-#### Named Entity Recognition
-...
 
 ## Citation
 ```
