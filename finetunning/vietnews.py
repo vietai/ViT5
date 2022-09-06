@@ -199,6 +199,7 @@ r2 = []
 r1 = []
 rL = []
 
+
 checkpoint = checkpoints[-1]
 score = metric.compute(predictions=open(f'predict_output.txt-{checkpoint}').readlines(), references=open('../data/vietnews/actual_output.txt').readlines())
 # score = metric.compute()
