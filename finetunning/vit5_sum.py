@@ -20,7 +20,7 @@ parser.add_argument('-output_path', dest='output_path', type=str, help='Output P
 
 args = parser.parse_args()
 
-TPU_TOPOLOGY = 'v3-8'
+TPU_TOPOLOGY = 'v2-8'
 TPU_ADDRESS = args.tpu
 TPU_ADDRESS = f'grpc://{TPU_ADDRESS}:8470'
 
