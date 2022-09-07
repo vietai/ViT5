@@ -162,7 +162,7 @@ with open(f'../data/vietnews/test.tsv') as file:
       for line in file:
         line = line.strip().split('\t')
         file_p.write(f'{line[0]}\n')
-        file_a.write(f'{line[0]}\n')
+        file_a.write(f'{line[1]}\n')
 
 for t in tasks:
   dir = t[0]
