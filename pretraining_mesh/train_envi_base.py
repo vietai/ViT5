@@ -58,18 +58,6 @@ def tf_verbosity_level(level):
 
 tf.disable_v2_behavior()
 
-# Improve logging.
-from contextlib import contextmanager
-import logging as py_logging
-
-
-@contextmanager
-def tf_verbosity_level(level):
-  og_level = tf.logging.get_verbosity()
-  tf.logging.set_verbosity(level)
-  yield
-  tf.logging.set_verbosity(og_level)
-
 gin.parse_config_file(
         '../configs/t5/base_operative_config.gin'
     )

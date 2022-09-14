@@ -64,18 +64,6 @@ def tf_verbosity_level(level):
 
 tf.disable_v2_behavior()
 
-# Improve logging.
-from contextlib import contextmanager
-import logging as py_logging
-
-
-@contextmanager
-def tf_verbosity_level(level):
-  og_level = tf.logging.get_verbosity()
-  tf.logging.set_verbosity(level)
-  yield
-  tf.logging.set_verbosity(og_level)
-
 gin.parse_config_file(
         '../configs/t5/large_operative_config.gin'
     )
@@ -138,24 +126,10 @@ model_parallelism, train_batch_size, keep_checkpoint_max = {
 
 model_dir = f'gs://{BUCKET}/models/enviT5_{MAX_LENGTH}_{MODEL_SIZE}_tags'
 
-# model = models.MtfModel(
-#   model_dir = model_dir,
-#   tpu = TPU_ADDRESS,
-#   tpu_topology = TPU_TOPOLOGY,
-#   model_parallelism = model_parallelism,
-#   batch_size = train_batch_size,
-#   sequence_length = {'inputs': MAX_LENGTH, 'targets': MAX_LENGTH},
-#   learning_rate_schedule = 0.001,
-#   save_checkpoints_steps = 2000,
-#   keep_checkpoint_max = 5,
-#   iterations_per_loop = 100,
-# )
 
 model = models.MtfModel(
   model_dir = model_dir,
   tpu = TPU_ADDRESS,
-  # gcp_project="vietai-research",
-  # tpu_zone="us-central2-b",
 
   tpu_topology = TPU_TOPOLOGY,
   model_parallelism = model_parallelism,
