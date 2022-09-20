@@ -4,17 +4,18 @@
 
 A pretrained Transformer-based encoder-decoder model for the Vietnamese language. With [T5](https://github.com/google-research/text-to-text-transfer-transformer)-style self-supervised pretraining, ViT5 is trained on a large corpus of high-quality and diverse Vietnamese texts. We benchmark ViT5 on two downstream text generation tasks, Abstractive Text Summarization and Named Entity Recognition. All the experiments are shown in our paper [ViT5: Pretrained Text-to-Text Transformer for Vietnamese Language Generation](https://arxiv.org/abs/2205.06457)
 
-### News Summarization Demo
-Try our demo on [HF Spaces](https://huggingface.co/spaces/VietAI/ViNewsSum)
-
 ### 🤗 HuggingFace Model Checkpoint
 - [ViT5-Base-1024 (1M)](https://huggingface.co/VietAI/vit5-base)
 - [ViT5-Large-1024 (1.5M)](https://huggingface.co/VietAI/vit5-large)
 
 _Notes: These two checkpoints are just pretrained language models._
 
+## Finetunning
+
+[Finetunning Examples with HuggingFace can be found here](https://github.com/vietai/ViT5/tree/main/finetunning_huggingface) 
+
 #### Example
-Below, we give an example of how to load ViT5 model from HuggingFace to summarize documents:
+
 
 ```python
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
