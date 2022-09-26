@@ -63,7 +63,9 @@ def tf_verbosity_level(level):
   yield
   tf.logging.set_verbosity(og_level)
 
-
+gin.parse_config_file(
+        '../configs/t5/base_operative_config.gin'
+    )
 
 
 def dumping_dataset(split, shuffle_files = False):
