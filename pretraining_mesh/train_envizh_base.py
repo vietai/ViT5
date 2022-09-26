@@ -1,5 +1,3 @@
-from tkinter import EW
-from unittest.util import _MAX_LENGTH
 import tensorflow
 import functools
 import os
