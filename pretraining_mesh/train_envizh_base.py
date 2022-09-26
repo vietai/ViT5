@@ -71,7 +71,7 @@ def tf_verbosity_level(level):
 def dumping_dataset(split, shuffle_files = False):
     del shuffle_files
 
-    files_name_cc100 = tf.io.gfile.glob(DATA_DIR +'/*tsv')
+    files_name_cc100 = tf.io.gfile.glob(DATA_DIR +'/*')
 
     shuffle(files_name_cc100)
 
