@@ -1,4 +1,4 @@
-# T5.1.1 Base model.
+# T5.1.0 Base model.
 from __gin__ import dynamic_registration
 
 import seqio
@@ -16,7 +16,9 @@ LOSS_NORMALIZING_FACTOR = None
 # Dropout should be specified in the "run" files
 DROPOUT_RATE = %gin.REQUIRED
 
-
+# Vocabulary (shared by encoder and decoder)
+VOCABULARY = @seqio.SentencePieceVocabulary()
+seqio.SentencePieceVocabulary.sentencepiece_model_file = "gs://vietai_public/viT5/viT5_base_1024/spiece.model"
 
 # ------------------- Optimizer ------------------------------------------------
 # `learning_rate` is set by `Trainer.learning_rate_fn`.
@@ -40,14 +42,14 @@ models.EncoderDecoderModel:
 # ------------------- Network specification ------------------------------------
 network.Transformer.config = @network.T5Config()
 network.T5Config:
-  vocab_size = 32128  # vocab size rounded to a multiple of 128 for TPU efficiency
+  vocab_size = 36096  # vocab size rounded to a multiple of 128 for TPU efficiency
   dtype = 'bfloat16'
   emb_dim = 768
   num_heads = 12
   num_encoder_layers = 12
   num_decoder_layers = 12
   head_dim = 64
-  mlp_dim = 2048
-  mlp_activations = ('gelu', 'linear')
+  mlp_dim = 3072
+  mlp_activations = ('relu',)
   dropout_rate = %DROPOUT_RATE
-  logits_via_embedding = False
+  logits_via_embedding = True

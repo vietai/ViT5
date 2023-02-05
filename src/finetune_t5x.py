@@ -15,12 +15,14 @@
 r"""Script to pretrain or finetune in JAX using a SeqIO pipeline.
 
 """
+
 import functools
-import itertools
+import gc
 import math
 import os
 import time
-from typing import Callable, Iterator, Sequence, Mapping, Tuple, Type, Optional
+from typing import Callable, Mapping, Optional, Sequence, Tuple, Type
+import warnings
 
 # Set Linen to add profiling information when constructing Modules.
 # Must be set before flax imports.
@@ -33,35 +35,38 @@ from clu import metric_writers
 import jax
 from jax import random
 from jax.experimental import multihost_utils
+from jax.experimental.global_device_array import GlobalDeviceArray
 import jax.numpy as jnp
 import numpy as np
 import seqio
+from t5x import checkpoints
+from t5x import eval as eval_lib
 from t5x import models
 from t5x import partitioning
 from t5x import train_state as train_state_lib
 from t5x import trainer as trainer_lib
 from t5x import utils
 import tensorflow as tf
-from task import seqio
+from task import seqio, registerTask
+
+import nest_asyncio
+nest_asyncio.apply()
 
 # Automatically search for gin files relative to the T5X package.
 _DEFAULT_GIN_SEARCH_PATHS = [
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'configs/t5x')
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ]
-
-
-PyTreeDef = type(jax.tree_structure(None))
+PyTreeDef = type(jax.tree_util.tree_structure(None))
 P = partitioning.PartitionSpec
 # Special key that used to distinguish train metrics.
 TRAIN_METRIC_KEY = 'train'
 # String keys that is acceptable from config.
 _ACTION_KEYS = frozenset(trainer_lib.ActionMode.__members__.keys())
+_IMPORT_TIME = time.time()
 
 
 def run_actions(
-    mode: trainer_lib.ActionMode,
-    actions: Mapping[trainer_lib.ActionMode, Sequence[trainer_lib.BaseAction]],
+    mode: trainer_lib.ActionMode, actions: trainer_lib.ActionMapType,
     train_state: train_state_lib.TrainState,
     metrics_by_task: Mapping[str, trainer_lib.MetricValueMapType]) -> bool:
   """Invokes all actions on the given mode on host 0, then broadcasts to all.
@@ -98,7 +103,7 @@ def train(
     infer_eval_dataset_cfg: Optional[utils.DatasetConfig],
     checkpoint_cfg: utils.CheckpointConfig,
     partitioner: partitioning.BasePartitioner,
-    trainer_cls: Type[trainer_lib.BaseTrainer],
+    trainer_cls: trainer_lib.BaseTrainerConstructor,
     model_dir: str,
     total_steps: int,
     eval_steps: int,
@@ -108,11 +113,22 @@ def train(
     use_hardware_rng: bool = False,
     summarize_config_fn: Callable[[str, metric_writers.MetricWriter, int],
                                   None],
-    inference_evaluator_cls: Type[seqio.Evaluator] = seqio.Evaluator,
+    inference_evaluator_cls: utils.EvaluatorConstructor = seqio.Evaluator,
     get_dataset_fn: utils.GetDatasetCallable = utils.get_dataset,
     concurrent_metrics: bool = True,
     actions: Optional[Mapping[str, Sequence[trainer_lib.BaseAction]]] = None,
-    train_eval_get_dataset_fn: Optional[utils.GetDatasetCallable] = None
+    train_eval_get_dataset_fn: utils.GetEvalDatasetCallable = utils
+    .get_training_eval_datasets,
+    run_eval_before_training: bool = False,
+    train_state_initializer_cls: Type[
+        utils.TrainStateInitializer] = utils.TrainStateInitializer,
+    use_gda: bool = True,
+    use_jax_array: bool = False,
+    use_orbax: bool = False,
+    verify_matching_vocabs_fn: Optional[
+        Callable[[utils.DatasetConfig, models.BaseTransformerModel],
+                 None]] = utils.verify_matching_vocabs,
+    gc_period: int = 0,
 ) -> Tuple[int, train_state_lib.TrainState]:
   """Train function.
 
@@ -132,7 +148,10 @@ def train(
     model_dir: Path of directory to store checkpoints and metric summaries.
     total_steps: The step number to stop training after. The number of actual
       steps trained in this run will be this number minus the starting step from
-      the checkpoint.
+      the checkpoint. If this is set to the starting step from the checkpoint,
+      the model will not be compiled for training and training will not be run.
+      This can be used in conjunction with `run_eval_before_training` to only
+      evaluate a model.
     eval_steps: The number of batches to process for each train-eval loop.
     eval_period: The number of train steps between each evaluation (both
       train-eval and infer-eval).
@@ -147,7 +166,6 @@ def train(
       for different shardings of the same model.
     summarize_config_fn: A function that takes in the model directory, a
       SummaryWriter, and the step number, and writes a summary of the
-      configuration.
     inference_evaluator_cls: seqio.Evaluator class to use for inference
       evaluation, potentially with bound configuration args.
     get_dataset_fn: The callable use to get the train and train-eval datasets
@@ -157,18 +175,49 @@ def train(
     actions: A mapping of actions that runs after train, eval or infer_eval, to
       inspect the model and perform useful operations, e.g., early stopping. The
       key must have a 1:1 mapping to ActionMode enum. For EVAL actions to
-        actually work, this requires `concurrent_metrics` to be turned off,
-        since chaining futures and mutating states concurrently might be
-        error-prone.
+      actually work, this requires `concurrent_metrics` to be turned off, since
+      chaining futures and mutating states concurrently might be error-prone.
     train_eval_get_dataset_fn: Optional callable use to get the train-eval
       datasets based on the DatasetConfig and shard information. If missing, it
-      defaults to `get_dataset_fn`.
+      defaults to `utils.get_training_eval_datasets`.
+    run_eval_before_training: If True, calculate training eval and inference
+      eval metrics before training begins.
+    train_state_initializer_cls: t5x.utils.TrainStateInitializer class for
+      initializing partitioned TrainState from checkpoints or scratch.
+    use_gda: if True, uses GlobalDeviceArray. Experimental feature.
+    use_jax_array: if True, uses jax.Array if use_gda is also True. Experimental
+      feature.
+    use_orbax: if True, uses Orbax for checkpointing. Experimental feature.
+    verify_matching_vocabs_fn: Function to validate whether the task vocabulary
+      matches the model vocabulary. Should raise an exception on error.
+    gc_period: The number of train steps between runs of the garbage collector.
+      If 0, the garbage collector will run at the normal frequency.
 
   Returns:
     The tuple of (last_step, last_train_state).
   """
+  jax.monitoring.record_event('/jax/t5x/train/beacon')
   logging.info('Process ID: %d', jax.process_index())
   tf.io.gfile.makedirs(model_dir)
+
+  if use_gda:
+    logging.info('GlobalDeviceArray enabled.')
+  else:
+    warnings.warn(
+        '`use_gda=False` is deprecated and will be removed on Feb-01-23.'
+        ' Please ensure that your workflow can use GDA.', DeprecationWarning)
+  if use_jax_array and not use_gda:
+    raise ValueError('Invalid configuration of `use_gda` and `use_jax_array`.')
+  if use_gda:
+    if use_jax_array:
+      jax.config.update('jax_array', True)
+    else:
+      jax.config.update('jax_parallel_functions_output_gda', True)
+
+  if use_orbax:
+    logging.info('Checkpointing with Orbax enabled.')
+    if not use_gda:
+      raise ValueError('Must set of `use_gda` if `use_orbax` is enabled.')
 
   # Each "epoch" of the training loop should be the min of the eval period,
   # checkpoint period or the full training.
@@ -177,16 +226,19 @@ def train(
   eval_enabled = (train_eval_dataset_cfg or infer_eval_dataset_cfg)
   eval_period = eval_period if eval_enabled else 0
   checkpoint_period = checkpoint_cfg.save.period if checkpoint_cfg.save else 0
-  if eval_period or checkpoint_period:
-    steps_per_epoch = min(eval_period or np.inf, checkpoint_period or np.inf)
+  if eval_period or checkpoint_period or gc_period:
+    steps_per_epoch = min(eval_period or np.inf, checkpoint_period or np.inf,
+                          gc_period or np.inf)
   else:
     steps_per_epoch = total_steps
   stats_period = stats_period or steps_per_epoch
   if (eval_period and eval_period % steps_per_epoch or
-      checkpoint_period and checkpoint_period % steps_per_epoch):
+      checkpoint_period and checkpoint_period % steps_per_epoch or
+      gc_period and gc_period % steps_per_epoch):
     raise ValueError(
-        f'Checkpoint period ({checkpoint_period}) must evenly divide eval '
-        f'period ({eval_period}), or vice-versa.')
+        f'Checkpoint period ({checkpoint_period}), eval '
+        f'period ({eval_period}), and GC period ({gc_period}) must all be '
+        f'multiples of eachother.')
 
   if use_hardware_rng or random_seed is None:
     logging.info(
@@ -214,7 +266,7 @@ def train(
   # ---------------------------------------------------------------------------
 
   if (train_dataset_cfg.seed and
-      not (checkpoint_cfg.save or checkpoint_cfg.save.save_dataset)):
+      not (checkpoint_cfg.save and checkpoint_cfg.save.save_dataset)):
     logging.warning(
         'Providing a random seed for the train dataset with '
         '`checkpoint_train_ds=False` is dangerous since each '
@@ -226,41 +278,35 @@ def train(
   num_ds_shards = data_layout.num_shards
 
   def _verify_matching_vocabs(cfg: utils.DatasetConfig):
-    ds_vocabs = utils.get_vocabulary(cfg)
-    if (ds_vocabs[0] != model.input_vocabulary or
-        ds_vocabs[1] != model.output_vocabulary):
-      raise ValueError(f'Model and Task vocabularies do not match:\n'
-                       f'  task={cfg.mixture_or_task_name}\n'
-                       f'  ds_vocabs=({ds_vocabs[0]}, {ds_vocabs[1]})\n'
-                       f'  model.input_vocabulary={model.input_vocabulary}\n'
-                       f'  model.output_vocabulary={model.output_vocabulary}\n')
+    if verify_matching_vocabs_fn is not None:
+      verify_matching_vocabs_fn(cfg, model)
 
   _verify_matching_vocabs(train_dataset_cfg)
 
-  train_ds = get_dataset_fn(train_dataset_cfg, ds_shard_id, num_ds_shards,
-                            model.FEATURE_CONVERTER_CLS)
+  train_iter = get_dataset_fn(train_dataset_cfg, ds_shard_id, num_ds_shards,
+                              model.FEATURE_CONVERTER_CLS)
+  train_iter = utils.prepare_train_iter(
+      train_iter,
+      checkpoint_cfg=checkpoint_cfg,
+      use_gda=use_gda,
+      partitioner=partitioner,
+      data_layout=data_layout)
+
+  input_shapes = jax.tree_map(lambda x: (data_layout.batch_size, *x.shape[1:]),
+                              train_iter.element_spec)
+  input_types = jax.tree_map(lambda x: x.dtype, train_iter.element_spec)
 
   if train_eval_dataset_cfg:
     _verify_matching_vocabs(train_eval_dataset_cfg)
-    train_eval_datasets = utils.get_training_eval_datasets(
-        train_eval_dataset_cfg,
-        ds_shard_id,
-        num_ds_shards,
-        eval_steps,
-        model.FEATURE_CONVERTER_CLS,
-        get_dataset_fn=train_eval_get_dataset_fn if train_eval_get_dataset_fn
-        is not None else get_dataset_fn)  # type: Mapping[str, tf.data.Dataset]
+    train_eval_datasets = train_eval_get_dataset_fn(
+        train_eval_dataset_cfg, ds_shard_id, num_ds_shards, eval_steps,
+        model.FEATURE_CONVERTER_CLS)  # type: Mapping[str, tf.data.Dataset]
     if not train_eval_datasets:
       logging.warning(
           'No train_eval datasets loaded from config `train_eval_dataset_cfg`: '
           '%s', train_eval_dataset_cfg)
   else:
     train_eval_datasets = {}
-
-  # Initialize optimizer, maybe from an existing checkpoint.
-  checkpointable_train_iter: tf.data.Iterator = iter(train_ds)  # pytype:disable=annotation-type-mismatch
-  train_iter: Iterator[trainer_lib.BatchType] = map(
-      lambda x: jax.tree_map(np.array, x), checkpointable_train_iter)
 
   # The manner in which parameters are initialized follows this order of
   # preference:
@@ -280,8 +326,9 @@ def train(
       utils.RestoreCheckpointConfig(
           path=model_dir,
           mode='latest',
-          dtype=checkpoint_cfg.save.dtype,
-          checkpointer_cls=checkpoint_cfg.save.checkpointer_cls,
+          dtype=checkpoint_cfg.save.dtype if checkpoint_cfg.save else 'float32',
+          checkpointer_cls=checkpoint_cfg.save.checkpointer_cls
+          if checkpoint_cfg.save else checkpoints.Checkpointer,
           # Restore dataset state if it is being saved.
           restore_dataset=(checkpoint_cfg.save and
                            checkpoint_cfg.save.save_dataset),
@@ -304,24 +351,56 @@ def train(
       raise ValueError(
           'Restore checkpoint config may only have a single path in training.')
 
-  # Need to use full batch size.
-  input_shapes = {
-      k: (data_layout.batch_size, *v.shape[1:])
-      for k, v in train_ds.element_spec.items()
-  }
-  input_types = {
-      k: v.dtype.as_numpy_dtype() for k, v in train_ds.element_spec.items()
-  }
   init_or_restore_tick = time.time()
-  train_state_initializer = utils.TrainStateInitializer(
+  train_state_initializer = train_state_initializer_cls(
       optimizer_def=model.optimizer_def,
       init_fn=model.get_initial_variables,
       input_shapes=input_shapes,
       input_types=input_types,
       partitioner=partitioner)
-  #  3. From scratch using `init_fn`.
-  train_state = train_state_initializer.from_checkpoint_or_scratch(
-      restore_cfgs, init_rng=init_rng, ds_iter=checkpointable_train_iter)
+
+  # May be None, empty
+  valid_restore_cfg, restore_paths = utils.get_first_valid_restore_config_and_paths(
+      restore_cfgs)
+  if len(restore_paths) > 1:
+    raise ValueError('Multiple restore paths not permitted in training.')
+
+  def _init(rng):
+    return train_state_initializer.from_scratch(rng).state_dict()
+
+  # Skip initialization if neither save nor restore is requested.
+  train_state = None
+  if valid_restore_cfg or checkpoint_period:
+    if use_orbax:
+      checkpoint_manager = utils.create_checkpoint_manager(
+          save_cfg=checkpoint_cfg.save,
+          restore_cfg=valid_restore_cfg,
+          train_state_shape=train_state_initializer.global_train_state_shape,
+          partitioner=partitioner,
+          ds_iter=train_iter,
+          model_dir=model_dir)
+      train_state = utils.restore(
+          checkpoint_manager, restore_paths, valid_restore_cfg,
+          utils.get_fallback_state(valid_restore_cfg, _init, init_rng))
+    else:
+      checkpoint_manager = utils.LegacyCheckpointManager(
+          save_cfg=checkpoint_cfg.save,
+          restore_cfg=valid_restore_cfg,
+          train_state_shape=train_state_initializer.global_train_state_shape,
+          partitioner=partitioner,
+          ds_iter=train_iter,
+          model_dir=model_dir,
+          use_gda=use_gda)
+      train_state = checkpoint_manager.restore(
+          restore_paths, valid_restore_cfg,
+          utils.get_fallback_state(valid_restore_cfg, _init, init_rng))
+
+  # Start warming up the input pipeline in the background. This must happen
+  # after input pipeline checkpoints were restored.
+  first_batch_ready = train_iter.peek_async()
+
+  # 3. If no checkpoint to restore, init from scratch.
+  train_state = train_state or train_state_initializer.from_scratch(init_rng)
   train_state_axes = train_state_initializer.train_state_axes
   init_or_restore_secs = time.time() - init_or_restore_tick
   logging.info('Initialize/restore complete (%.2f seconds).',
@@ -333,18 +412,8 @@ def train(
                        train_state_initializer.global_train_state_shape,
                        partitioner)
 
-  if checkpoint_period:
-    checkpointer = checkpoint_cfg.save.checkpointer_cls(
-        train_state=train_state_initializer.global_train_state_shape,
-        partitioner=partitioner,
-        checkpoints_dir=model_dir,
-        dataset_iterator=(checkpointable_train_iter
-                          if checkpoint_cfg.save.save_dataset else None),
-        save_dtype=checkpoint_cfg.save.dtype,
-        keep=checkpoint_cfg.save.keep)
-
   # Restore step from last checkpoint or set to 0 if training from scratch.
-  host_step = int(train_state.step)
+  host_step = int(utils.get_local_data(train_state.step))  # pytype: disable=attribute-error
 
   # ---------------------------------------------------------------------------
   # Trainer
@@ -372,32 +441,16 @@ def train(
   # Init evaluator to set up cached datasets
   evaluator = None
   if infer_eval_dataset_cfg is not None:
-    _verify_matching_vocabs(infer_eval_dataset_cfg)
-    evaluator = inference_evaluator_cls(
-        log_dir=os.path.join(model_dir, 'inference_eval'),
-        mixture_or_task_name=infer_eval_dataset_cfg.mixture_or_task_name,
-        feature_converter=model.FEATURE_CONVERTER_CLS(pack=False),
-        eval_split=infer_eval_dataset_cfg.split,
-        use_cached=infer_eval_dataset_cfg.use_cached,
-        seed=infer_eval_dataset_cfg.seed,
-        sequence_length=infer_eval_dataset_cfg.task_feature_lengths,
-        use_memory_cache=infer_eval_dataset_cfg.use_memory_cache)
+    evaluator = eval_lib.InferenceEvaluator(
+        infer_eval_dataset_cfg=infer_eval_dataset_cfg,
+        inference_evaluator_cls=inference_evaluator_cls,
+        model=model,
+        partitioner=partitioner,
+        log_dir=model_dir,
+        verify_matching_vocabs_fn=verify_matching_vocabs_fn)
     if not evaluator.eval_tasks:
       # Skip evaluaton.
       evaluator = None
-
-  if evaluator is not None:
-    predict_fn = utils.get_infer_fn(
-        infer_step=model.predict_batch,
-        batch_size=infer_eval_dataset_cfg.batch_size,
-        train_state_axes=train_state_axes,
-        partitioner=partitioner)
-
-    score_fn = utils.get_infer_fn(
-        infer_step=model.score_batch,
-        batch_size=infer_eval_dataset_cfg.batch_size,
-        train_state_axes=train_state_axes,
-        partitioner=partitioner)
 
   if actions is None:
     actions = {}
@@ -419,9 +472,81 @@ def train(
                     'metrics computation is enabled')
 
   # ----------------------------------------------------------------------------
+  # Setup Eval Utility Functions
+  # ----------------------------------------------------------------------------
+  def _run_training_eval(first_run: bool = False):
+    if first_run:
+      logging.info('Compiling training eval loop.')
+      trainer.compile_eval({
+          task: utils.get_zeros_batch_like_dataset(ds)
+          for task, ds in train_eval_datasets.items()
+      })
+    logging.info('Computing training evaluation metrics.')
+    eval_batch_iters = {
+        task: ds.as_numpy_iterator()
+        for task, ds in train_eval_datasets.items()
+    }
+    eval_summaries = trainer.eval(eval_batch_iters)
+    trainer.stop_training = run_actions(trainer_lib.ActionMode.TRAIN_EVAL,
+                                        actions, trainer.train_state,
+                                        eval_summaries)
+
+  def _run_inference_eval():
+    """Run prediction based inference eval."""
+    if evaluator is None:
+      return
+    logging.info('Running inference evaluation.')
+    evaluate_tick = time.time()
+    all_metrics = evaluator.evaluate(trainer.train_state, train_state_axes)
+    if not concurrent_metrics:
+      # Ensure metrics are finished being computed.
+      all_metrics_done = all_metrics.result() or {}
+      trainer.stop_training = run_actions(trainer_lib.ActionMode.INFER_EVAL,
+                                          actions, trainer.train_state,
+                                          all_metrics_done)
+    train_metrics.write_scalar('timing/evaluate_seconds',
+                               time.time() - evaluate_tick, host_step)
+
+  # Optionally run teacher-forcing training eval and SeqIO inference-base eval
+  # before training. Useful for testing how much a model knows before any
+  # finetuning.
+  if run_eval_before_training:
+    if train_eval_datasets:
+      logging.info('Running training eval before training.')
+      _run_training_eval(first_run=True)
+    if evaluator is not None:
+      logging.info('Running inference eval before training.')
+      _run_inference_eval()
+
+  # Save checkpoints before the training loop starts.
+  if checkpoint_period:
+    # If not using Orbax, always save checkpoint, otherwise, only save a
+    # checkpoint if a checkpoint does not already exist for that step. This is
+    # because Orbax will error out if we try to save a checkpoint that already
+    # exists.
+    if not use_orbax or (use_orbax and trainer.train_state.step
+                         not in checkpoint_manager.all_steps()):
+      logging.info('Saving checkpoint before the training loop starts.')
+      checkpoint_manager.save(trainer.train_state,
+                              checkpoint_cfg.save.state_transformation_fns)
+
+  # If we take manual control of the garbage collector, we need to disable it
+  # before starting training.
+  if gc_period:
+    gc.disable()
+
+  # ----------------------------------------------------------------------------
   # Main training loop
   # ----------------------------------------------------------------------------
   logging.info('Starting training loop.')
+
+  def _cleanup() -> None:
+    """Ensures everything has been closed upon completion."""
+    trainer.close()
+    if evaluator:
+      evaluator.close()
+    utils.sync_global_devices('complete')
+    logging.info('Finished.')
 
   first_step = host_step
 
@@ -429,6 +554,14 @@ def train(
     raise ValueError(
         f'Unexpected total_steps ({total_steps}) < checkpoint step '
         f' ({first_step}).')
+  elif total_steps == first_step:
+    logging.warning(
+        'Total training steps and checkpoint step were both %d, so no training '
+        'will be done. If you are only doing evaluation, this is expected. '
+        'Stopping now.', total_steps)
+    _cleanup()
+    return host_step, trainer.train_state
+
   logging.info('Starting main loop over steps %d-%d', first_step, total_steps)
 
   steps_per_epoch = min(steps_per_epoch, total_steps)
@@ -438,20 +571,51 @@ def train(
   logging.info('Training with artificial "epochs" of %d steps.',
                steps_per_epoch)
 
-  # Kickstart training dataset and compile train loop.
-  logging.info('Kickstarting train dataset prefetch.')
-  logging.flush()
-
-  ds_tick = time.time()
-  # Get first batch to warm up the dataset pipeline.
-  first_batch = next(train_iter)
-  # Prepend first batch back to iterator to be used by trainer.
-  train_iter = itertools.chain([first_batch], train_iter)
-  train_metrics.write_scalar('timing/dataset_warmup_seconds',
-                             time.time() - ds_tick, host_step)
   logging.info('Compiling train loop.')
   logging.flush()
-  trainer.compile_train(first_batch)
+
+  def _as_gda(spec):
+    dummy = np.ones((data_layout.batch_size, *spec.shape[1:]), spec.dtype)
+    if jax.config.jax_array:
+      return jax.make_array_from_callback(
+          dummy.shape,
+          jax.sharding.NamedSharding(partitioner.mesh,
+                                     partitioner.data_partition_spec),
+          lambda idx: dummy[idx])
+    else:
+      return GlobalDeviceArray.from_callback(dummy.shape, partitioner.mesh,
+                                             partitioner.data_partition_spec,
+                                             lambda idx: dummy[idx])
+
+  # Construct dummy batch for compiling the model.
+  if use_gda:
+    dummy_batch = jax.tree_map(_as_gda, train_iter.element_spec)
+  else:
+    dummy_batch = jax.tree_map(lambda x: np.ones(x.shape, x.dtype),
+                               train_iter.element_spec)
+  if not isinstance(dummy_batch, Mapping):
+    raise ValueError('Training loop expects batches to have type '
+                     f'Mapping[str, np.ndarray] but got {type(dummy_batch)}.')
+
+  assert isinstance(dummy_batch, Mapping)
+  trainer.compile_train(dummy_batch)
+
+  # ----------------------------------------------------------------------------
+  # Warmup input pipeline.
+  # ----------------------------------------------------------------------------
+  train_iter_warmup_tick = time.time()
+  # We are cheating here. The input pipeline already started warmup when
+  # first_batch_ready was created. The warmup was then interleaved with the
+  # model compilation above. We just measure the additional time needed.
+  first_batch_ready.result()
+  train_iter_warmup_tock = time.time()
+  train_metrics.write_scalar('timing/train_iter_warmup',
+                             train_iter_warmup_tock - train_iter_warmup_tick,
+                             host_step)
+
+  jax.monitoring.record_event_duration_secs(
+      '/jax/t5x/train/time_before_first_step_secs',
+      time.time() - _IMPORT_TIME)
 
   # Main Loop over "epochs".
   for epoch in range(first_epoch, num_epochs):
@@ -470,9 +634,11 @@ def train(
       logging.info('Training for %d steps.', num_steps)
       while host_step < epoch_end_step:
         if trainer.stop_training:
-          logging.info('Saving a checkpoint before early stopping...')
-          checkpointer.save(trainer.train_state,
-                            checkpoint_cfg.save.state_transformation_fns)
+          if checkpoint_period:
+            logging.info('Saving a checkpoint before early stopping...')
+            checkpoint_manager.save(
+                trainer.train_state,
+                checkpoint_cfg.save.state_transformation_fns)
           logging.info('Stopping training loop early since `stop_training` is '
                        'requested.')
           break
@@ -492,13 +658,17 @@ def train(
         host_step += inner_num_steps
       logging.info('END Train loop.')
     except trainer_lib.PreemptionError as e:
-      logging.info('Saving emergency checkpoint.')
-      checkpointer.save(trainer.train_state,
-                        checkpoint_cfg.save.state_transformation_fns)
-      logging.info('Saving emergency checkpoint done.')
+      if checkpoint_period:
+        logging.info('Saving emergency checkpoint.')
+        checkpoint_manager.save(trainer.train_state,
+                                checkpoint_cfg.save.state_transformation_fns)
+        logging.info('Saving emergency checkpoint done.')
       raise e
 
     step_offset = host_step - first_step
+
+    if gc_period and (final_epoch or step_offset % gc_period == 0):
+      gc.collect()
 
     # Maybe save a checkpoint.
     if checkpoint_period and (final_epoch or
@@ -507,8 +677,8 @@ def train(
       train_summary.result()
       logging.info('Saving checkpoint.')
       checkpoint_tick = time.time()
-      checkpointer.save(trainer.train_state,
-                        checkpoint_cfg.save.state_transformation_fns)
+      checkpoint_manager.save(trainer.train_state,
+                              checkpoint_cfg.save.state_transformation_fns)
       checkpoint_tock = time.time()
       train_metrics.write_scalar('timing/checkpoint_seconds',
                                  checkpoint_tock - checkpoint_tick, host_step)
@@ -518,48 +688,21 @@ def train(
 
     # Training Evaluation (i.e., with teacher forcing).
     if is_eval_epoch and train_eval_datasets:
-      if step_offset // eval_period <= 1:  # Maybe less if final step < period.
-        # Compile before the first run.
-        logging.info('Compiling training eval loop.')
-        trainer.compile_eval({
-            task: utils.get_zeros_batch_like_dataset(ds)
-            for task, ds in train_eval_datasets.items()
-        })
-      logging.info('Computing training evaluation metrics.')
-      eval_batch_iters = {
-          task: ds.as_numpy_iterator()
-          for task, ds in train_eval_datasets.items()
-      }
-      eval_summaries = trainer.eval(eval_batch_iters)
-      trainer.stop_training = run_actions(trainer_lib.ActionMode.TRAIN_EVAL,
-                                          actions, trainer.train_state,
-                                          eval_summaries)
+      # Maybe less if final step < period.
+      first_run = step_offset // eval_period <= 1
+      _run_training_eval(first_run and not run_eval_before_training)
 
     # Inference Evaluation (i.e., with decoding or scoring).
-    if evaluator is not None:
-      logging.info('Running inference evaluation.')
-      evaluate_tick = time.time()
-      all_metrics, _, _ = evaluator.evaluate(
-          compute_metrics=jax.process_index() == 0,
-          step=host_step,
-          predict_fn=functools.partial(
-              predict_fn, train_state=trainer.train_state),
-          score_fn=functools.partial(score_fn, train_state=trainer.train_state))
-      if not concurrent_metrics:
-        # Ensure metrics are finished being computed.
-        all_metrics_done = all_metrics.result() or {}
-        trainer.stop_training = run_actions(trainer_lib.ActionMode.INFER_EVAL,
-                                            actions, trainer.train_state,
-                                            all_metrics_done)
-      train_metrics.write_scalar('timing/evaluate_seconds',
-                                 time.time() - evaluate_tick, host_step)
-      # Make sure the metrics are flushed before exiting.
-      if final_epoch:
-        all_metrics.result()
+    if is_eval_epoch and evaluator is not None:
+      _run_inference_eval()
 
   # Wait until computations are done before exiting
-  logging.info('Finished.')
-  multihost_utils.sync_global_devices('complete')
+  _cleanup()
+
+  if gc_period:
+    # Reenable garbage collection to avoid affecting future code executed in
+    # the same interpreter.
+    gc.enable()
 
   return host_step, trainer.train_state
 
@@ -573,6 +716,8 @@ if __name__ == '__main__':
   # pylint: enable=g-import-not-at-top
 
   FLAGS = flags.FLAGS
+  # OOM fix. Prevents TF from seeing GPUs to stop conflict with JAX.
+  tf.config.experimental.set_visible_devices([], 'GPU')
 
   jax.config.parse_flags_with_absl()
 
@@ -601,6 +746,30 @@ if __name__ == '__main__':
       'bucket. Note that this flag overrides the `tfds_data_dir` attribute of '
       'all `Task`s.')
 
+  flags.DEFINE_list(
+      'seqio_additional_cache_dirs', [],
+      'Directories to search for cached Tasks in addition to defaults.')
+
+  flags.DEFINE_boolean(
+      'multiprocess_gpu',
+      False,
+      help='Initialize JAX distributed system for multi-host GPU, using '
+      '`coordinator_address`, `process_count`, and `process_index`.')
+
+  flags.DEFINE_string(
+      'coordinator_address',
+      None,
+      help='IP address:port for multi-host GPU coordinator.')
+
+  flags.DEFINE_integer(
+      'process_count', None, help='Number of processes for multi-host GPU.')
+
+  flags.DEFINE_integer('process_index', None, help='Index of this process.')
+  flags.DEFINE_string('vocab', 'default', required=False, help="Vocab for Public T5 Model: default or mt5")
+  flags.DEFINE_string("task",None, required=True, help="seqio.task for training")
+  flags.DEFINE_string("metric", "PRF1", required=False, help="Define Metric Function")
+  flags.DEFINE_string("train_file",None, required=True, help="The Train File for training task")
+  flags.DEFINE_string("predict_file",None, required=False, help="The Predict File")
 
 
   def main(argv: Sequence[str]):
@@ -612,17 +781,38 @@ if __name__ == '__main__':
     if len(argv) > 1:
       raise app.UsageError('Too many command-line arguments.')
 
+
+    if FLAGS.multiprocess_gpu:
+      logging.info(
+          'Initializing distributed system for multi-host GPU:\n'
+          '  coordinator_address: %s\n  process_count: %s\n  process_index: %s',
+          FLAGS.coordinator_address, FLAGS.process_count, FLAGS.process_index)
+
+      jax.distributed.initialize(FLAGS.coordinator_address, FLAGS.process_count,
+                                 FLAGS.process_index)
+
+    splits = {"train": FLAGS.train_file}
+    if FLAGS.predict_file:
+      splits["predict"] = FLAGS.predict_file
+    registerTask(FLAGS.task, splits=splits, metric_name=FLAGS.metric, vocab=FLAGS.vocab)
+
     if FLAGS.tfds_data_dir:
       seqio.set_tfds_data_dir_override(FLAGS.tfds_data_dir)
 
+    seqio.add_global_cache_dirs(FLAGS.seqio_additional_cache_dirs)
+    
     # Create gin-configurable version of `train`.
     train_using_gin = gin.configurable(train)
+    
 
     gin_utils.parse_gin_flags(
         # User-provided gin paths take precedence if relative paths conflict.
         FLAGS.gin_search_paths + _DEFAULT_GIN_SEARCH_PATHS,
         FLAGS.gin_file,
         FLAGS.gin_bindings)
+
     train_using_gin()
+    jax.effects_barrier()
+
 
   gin_utils.run(main)

@@ -1,6 +1,0 @@
-include '3B_operative_config.gin'
-
-d_ff = 10922
-DenseReluDense.activation = ["gelu", "linear"]
-dropout_rate = 0.0
-Unitransformer.shared_embedding_and_softmax_weights = False
