@@ -1,4 +1,3 @@
-# T5.1.0 Base model.
 from __gin__ import dynamic_registration
 
 import seqio
@@ -44,12 +43,12 @@ network.Transformer.config = @network.T5Config()
 network.T5Config:
   vocab_size = 36096  # vocab size rounded to a multiple of 128 for TPU efficiency
   dtype = 'bfloat16'
-  emb_dim = 768
-  num_heads = 12
-  num_encoder_layers = 12
-  num_decoder_layers = 12
+  emb_dim = 1024
+  num_heads = 16
+  num_encoder_layers = 24
+  num_decoder_layers = 24
   head_dim = 64
-  mlp_dim = 3072
-  mlp_activations = ('relu',)
+  mlp_dim = 2816
+  mlp_activations = ('gelu', 'linear')
   dropout_rate = %DROPOUT_RATE
-  logits_via_embedding = True
+  logits_via_embedding = False

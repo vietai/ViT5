@@ -8,7 +8,7 @@ import os
 
 TaskRegistry = seqio.TaskRegistry
 
-DEFAULT_ViT5_SPM_PATH = "gs://vietai_public/viT5/viT5_base_1024/spiece.model"
+DEFAULT_ViT5_SPM_PATH = "gs://vietai_public/viT5/vocab/spiece.model"
 DEFAULT_OUTPUT_FEATURES = {
     "inputs": seqio.Feature(
         vocabulary=seqio.SentencePieceVocabulary(DEFAULT_ViT5_SPM_PATH), add_eos=True,
