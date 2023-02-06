@@ -5,19 +5,24 @@
 
 A pretrained Transformer-based encoder-decoder model for the Vietnamese language. With [T5](https://github.com/google-research/text-to-text-transfer-transformer)-style self-supervised pretraining, ViT5 is trained on a large corpus of high-quality and diverse Vietnamese texts. We benchmark ViT5 on two downstream text generation tasks, Abstractive Text Summarization and Named Entity Recognition. All the experiments are shown in our paper [ViT5: Pretrained Text-to-Text Transformer for Vietnamese Language Generation](https://arxiv.org/abs/2205.06457)
 
-### 🤗 HuggingFace Model Checkpoint
-- [ViT5-Base-1024 (1M)](https://huggingface.co/VietAI/vit5-base)
-- [ViT5-Large-1024 (1.5M)](https://huggingface.co/VietAI/vit5-large)
 
-_Notes: These two checkpoints are just pretrained language models._
+## Pretrained Models
+**Vocabulary:**
+[ViT5_vocab](https://storage.googleapis.com/vietai_public/viT5/vocab/spiece.model)
+
+Model        | Gin File Location                                                                  | Checkpoint Location| 🤗 HuggingFace Model	
+------------ | ---------------------------------------------------------------------------------- | -------------------| -------------------
+ViT5-Base | [ViT5_base.gin](https://github.com/vietai/ViT5/blob/main/configs/t5/vit5_base.gin) | [gs://vietai_public/viT5/ViT5_base/checkpoint_1000000](https://console.cloud.google.com/storage/browser/vietai_public/viT5/ViT5_base) | [ViT5-Base-1024 (1M)](https://huggingface.co/VietAI/vit5-base)
+ViT5-Large | [ViT5_large.gin](https://github.com/vietai/ViT5/blob/main/configs/t5/vit5_large.gin) | [gs://vietai_public/viT5/ViT5_large/checkpoint_1500000](https://console.cloud.google.com/storage/browser/vietai_public/viT5/ViT5_large) | [ViT5-Large-1024 (1.5M)](https://huggingface.co/VietAI/vit5-large)
 
 ## Finetunning
 
-[Finetunning Examples with HuggingFace can be found here](https://github.com/vietai/ViT5/tree/main/finetunning_huggingface) 
+📄 Example with Flaxformer: [finetune_vit5x_example.ipynb](https://github.com/vietai/ViT5/blob/main/examples/finetune_vit5x_example.ipynb)
 
-## Evaluation
+📄 Example with Hugging Face: [finetune_huggingface_example.ipynb](https://github.com/vietai/ViT5/blob/main/examples/finetune_huggingface_example.ipynb)
 
-- [Eval scripts for Vietnews Summarization with HuggingFace 🤗](https://github.com/vietai/ViT5/blob/main/eval/Eval_vietnews_sum.ipynb)
+
+## Results
 
 ![image](https://user-images.githubusercontent.com/44376091/187878636-15310ddb-7065-456d-8276-e606df482087.png)
 
